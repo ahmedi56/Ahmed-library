@@ -219,6 +219,27 @@ bypassable there (global cap still holds). Deploy on Vercel/Netlify.
   gone at 36.5 s, dismissed on mousemove, no greeting on quick reload.
   Note: timers run slow while the preview pane is hidden.
 
+### Session C, part 6 — guided tour, git, smoke tests, day/night
+- **Git now exists** (branch `main`, local author set in repo config only).
+  `.env` is ignored; secret scan of the first commit was clean.
+- **Guided tour** (`src/components/ui/GuidedTour.tsx`, room chunk;
+  `src/lib/tourInput.ts` drives CameraRig like touchInput does). Header
+  "TOUR" button + menu entry. Fade-cut to x = 3.25 (clear of shelf and
+  desk colliders), glide + turn to each book, open, read (4.5–9 s by word
+  count), next. Pause / Next / End; closing a book = next. Touch controls
+  and idle jokes hidden while touring. Using the tour rules out Speed
+  reader for that visit. Verified: full run 8 books in 89 s; pause holds;
+  End releases the camera.
+- **Smoke tests**: `npm run test:e2e` (Playwright, installed Edge, no
+  browser download) — flat view, deep link + stamps + card, tour. The 3D
+  runs in software on the CPU, so room tests use a small viewport, low
+  tier, `test.slow()`, and the suite retries once.
+- **Day / dusk / night** by the visitor's clock (`src/lib/timeOfDay.ts`):
+  window, window light, sky, indoor light levels. Dusk = original scene
+  exactly. Night starts with the lamp on (Reading light still needs a
+  real switch-on). Preview any with `?time=day|dusk|night`.
+- `npm install` reported audit warnings — not yet reviewed.
+
 ## 5. Bugs & risks — items 1–5 FIXED in Session C (kept for context)
 
 Ordered by how much they matter. None are regressions from the work above.
