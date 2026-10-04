@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { AtmosphereMix } from '../../hooks/useAtmosphereMix';
+import { timePalette as tp } from '../../lib/timeOfDay';
 
 interface LightingProps {
   shadows: boolean;
@@ -41,14 +42,15 @@ export function LibraryLighting({ shadows, quality, mix }: LightingProps) {
 
   useFrame(() => {
     const m = mix.current.value;
-    if (ambient.current) ambient.current.intensity = AMBIENT_MAX * m;
-    if (key.current) key.current.intensity = KEY_MAX * m;
-    if (fill.current) fill.current.intensity = FILL_MAX * m;
+    // Scaled by the visitor's time of day; all 1 at dusk (lib/timeOfDay.ts).
+    if (ambient.current) ambient.current.intensity = AMBIENT_MAX * m * tp.ambientScale;
+    if (key.current) key.current.intensity = KEY_MAX * m * tp.keyScale;
+    if (fill.current) fill.current.intensity = FILL_MAX * m * tp.fillScale;
     if (rim.current) rim.current.intensity = RIM_MAX * m;
     if (exteriorAmbient.current) {
-      exteriorAmbient.current.intensity = EXT_AMBIENT_MAX * (1 - m * 0.7);
+      exteriorAmbient.current.intensity = EXT_AMBIENT_MAX * (1 - m * 0.7) * tp.exteriorAmbientScale;
     }
-    if (porch.current) porch.current.intensity = PORCH_MAX * (1 - m * 0.6);
+    if (porch.current) porch.current.intensity = PORCH_MAX * (1 - m * 0.6) * tp.porchScale;
   });
 
   return (
@@ -87,7 +89,7 @@ export function LibraryLighting({ shadows, quality, mix }: LightingProps) {
         shadow-normalBias={0.02}
       />
 
-      <directionalLight ref={fill} position={[4, 1.5, -1]} intensity={0} color="#7fa3c4" />
+      <directionalLight ref={fill} position={[4, 1.5, -1]} intensity={0} color={tp.fillColor} />
 
       <spotLight
         ref={rim}

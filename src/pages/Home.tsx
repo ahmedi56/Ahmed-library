@@ -36,6 +36,7 @@ import { DiscoveryTally } from '../components/ui/DiscoveryTally';
 import { useChallenges } from '../hooks/useChallenges';
 import { usePCSearch } from '../hooks/usePCSearch';
 import { unlockAudio } from '../lib/audio';
+import { timeOfDay } from '../lib/timeOfDay';
 import { playBookClose, playDoorCreak, playPageFlip, playSwitch } from '../lib/sfx';
 import { FallbackLibrary } from '../components/ui/FallbackLibrary';
 import { SceneErrorBoundary } from '../components/ui/SceneErrorBoundary';
@@ -86,7 +87,9 @@ export function Home() {
   const [pcOpen, setPcOpen] = useState(false);
   const [doorOpen, setDoorOpen] = useState(false);
   const [doorHovered, setDoorHovered] = useState(false);
-  const [lampOn, setLampOn] = useState(false);
+  // After dark the desk lamp is already on when the visitor arrives (the
+  // room keeps their local hours — lib/timeOfDay.ts).
+  const [lampOn, setLampOn] = useState(timeOfDay === 'night');
   const [lampHovered, setLampHovered] = useState(false);
   // Every prompt in this UI used to read "PRESS E", which is not an
   // instruction a phone can follow; on touch the equivalent is the
@@ -165,7 +168,11 @@ export function Home() {
 
   // Secret stamp: five lamp flicks inside three seconds.
   const lampFlicks = useRef<number[]>([]);
+  // Reading light is for switching the lamp on yourself — not for arriving
+  // at night, when it already is.
+  const lampTouched = useRef(false);
   const toggleLamp = useCallback(() => {
+    lampTouched.current = true;
     setLampOn((v) => !v);
     const now = Date.now();
     lampFlicks.current = [...lampFlicks.current.filter((t) => now - t < 3000), now];
@@ -261,7 +268,7 @@ export function Home() {
   }, [isInside, earn]);
 
   useEffect(() => {
-    if (lampOn) earn('lamp');
+    if (lampOn && lampTouched.current) earn('lamp');
   }, [lampOn, earn]);
 
   useEffect(() => {

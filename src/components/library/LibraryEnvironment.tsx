@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
+import { timePalette } from '../../lib/timeOfDay';
 import {
   getRugTexture,
   getWallGradientTexture,
@@ -990,9 +991,10 @@ function Window({ quality }: { quality: 'high' | 'medium' | 'low' }) {
   const glassMat = useMemo(
     () =>
       new THREE.MeshStandardMaterial({
-        color: '#1c2c3d',
-        emissive: '#3c5d78',
-        emissiveIntensity: quality === 'low' ? 0.32 : 0.5,
+        // Day, dusk or night by the visitor's clock (lib/timeOfDay.ts).
+        color: timePalette.glassColor,
+        emissive: timePalette.glassEmissive,
+        emissiveIntensity: (quality === 'low' ? 0.32 : 0.5) * timePalette.glassEmissiveScale,
         roughness: 0.1,
         metalness: 0.2,
       }),
@@ -1068,7 +1070,12 @@ function Window({ quality }: { quality: 'high' | 'medium' | 'low' }) {
       </mesh>
 
       {quality !== 'low' && (
-        <pointLight position={[0, 0, 0.4]} intensity={1.7} color="#5b7fa6" distance={6} />
+        <pointLight
+          position={[0, 0, 0.4]}
+          intensity={1.7 * timePalette.windowLightScale}
+          color={timePalette.windowLightColor}
+          distance={6}
+        />
       )}
 
       {/* Sill, sticking out below the opening, well in front of the wall plane */}
@@ -1108,9 +1115,9 @@ function Window({ quality }: { quality: 'high' | 'medium' | 'low' }) {
               ending. */}
           <meshBasicMaterial
             map={getLightShaftTexture()}
-            color="#cfe0ee"
+            color={timePalette.shaftColor}
             transparent
-            opacity={0.62}
+            opacity={0.62 * timePalette.shaftOpacityScale}
             depthWrite={false}
             blending={THREE.AdditiveBlending}
           />

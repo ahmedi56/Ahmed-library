@@ -17,6 +17,7 @@ import type { useBookInteraction } from '../../hooks/useBookInteraction';
 import type { PerformanceProfile } from '../../hooks/usePerformance';
 import type { EntrancePhase } from '../../hooks/useEntrance';
 import { useAtmosphereMix } from '../../hooks/useAtmosphereMix';
+import { timePalette } from '../../lib/timeOfDay';
 
 interface LibrarySceneProps {
   interaction: ReturnType<typeof useBookInteraction>;
@@ -108,8 +109,8 @@ export function LibraryScene({
         powerPreference: 'high-performance',
       }}
     >
-      <color attach="background" args={['#22303f']} />
-      <fog attach="fog" args={['#22303f', 4.5, 11]} />
+      <color attach="background" args={[timePalette.exteriorColor]} />
+      <fog attach="fog" args={[timePalette.exteriorColor, 4.5, 11]} />
 
       <Suspense fallback={null}>
         <LibraryLighting shadows={profile.shadows} quality={profile.tier} mix={mix} />

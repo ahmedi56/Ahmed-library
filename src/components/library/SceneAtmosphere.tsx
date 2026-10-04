@@ -2,12 +2,14 @@ import { useMemo } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { AtmosphereMix } from '../../hooks/useAtmosphereMix';
+import { timePalette } from '../../lib/timeOfDay';
 
 interface SceneAtmosphereProps {
   mix: React.RefObject<AtmosphereMix>;
 }
 
-const EXTERIOR_COLOR = new THREE.Color('#22303f');
+// The sky outside the door follows the visitor's clock (lib/timeOfDay.ts).
+const EXTERIOR_COLOR = new THREE.Color(timePalette.exteriorColor);
 const INTERIOR_COLOR = new THREE.Color('#efe6d3');
 
 export function SceneAtmosphere({ mix }: SceneAtmosphereProps) {
