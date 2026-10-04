@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Menu, X, Settings, Rows3, LogIn, LogOut, Footprints } from 'lucide-react';
+import { Menu, X, Settings, Rows3, LogIn, LogOut, Footprints, MessageCircleQuestion } from 'lucide-react';
 import { SettingsPanel } from './SettingsPanel';
 import { useBooks } from '../../hooks/useBooks';
 import { useOwner } from '../../hooks/useOwner';
@@ -26,9 +26,11 @@ interface NavigationProps {
   onSkipRoom: () => void;
   /** Starts the guided tour of the shelf. */
   onStartTour: () => void;
+  /** Opens "Ask the librarian". */
+  onAsk: () => void;
 }
 
-export function Navigation({ onOpenBook, onSkipRoom, onStartTour }: NavigationProps) {
+export function Navigation({ onOpenBook, onSkipRoom, onStartTour, onAsk }: NavigationProps) {
   const { books } = useBooks();
   const { ready, isOwner, signedIn, signIn, leave, error } = useOwner();
   const [open, setOpen] = useState(false);
@@ -113,6 +115,15 @@ export function Navigation({ onOpenBook, onSkipRoom, onStartTour }: NavigationPr
               <span className="hidden sm:inline">SIGN OUT</span>
             </button>
           )}
+
+          <button
+            onClick={onAsk}
+            aria-label="Ask the librarian"
+            className="flex items-center gap-2 rounded-full border border-brass/40 bg-paper/70 px-4 py-2 text-xs tracking-[0.2em] text-oak backdrop-blur-sm transition hover:border-brass hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass"
+          >
+            <MessageCircleQuestion size={14} aria-hidden="true" />
+            <span className="hidden sm:inline">ASK</span>
+          </button>
 
           <button
             onClick={() => setOpen((v) => !v)}

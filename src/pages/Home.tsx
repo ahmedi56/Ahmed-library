@@ -21,6 +21,10 @@ const StampToast = lazy(() =>
 const BorrowerCard = lazy(() =>
   import('../components/ui/BorrowerCard').then((m) => ({ default: m.BorrowerCard }))
 );
+// "Ask the librarian" — loaded on first open, in either view.
+const AskLibrarian = lazy(() =>
+  import('../components/ui/AskLibrarian').then((m) => ({ default: m.AskLibrarian }))
+);
 const RoomQuips = lazy(() =>
   import('../components/ui/RoomQuips').then((m) => ({ default: m.RoomQuips }))
 );
@@ -165,6 +169,7 @@ export function Home() {
     setTourOn(true);
   }, []);
   const endTour = useCallback(() => setTourOn(false), []);
+  const [askOpen, setAskOpen] = useState(false);
 
   // Secret stamp: five lamp flicks inside three seconds.
   const lampFlicks = useRef<number[]>([]);
@@ -396,6 +401,7 @@ export function Home() {
             tourActive={tourOn && isInside}
             onStartTour={startTour}
             onTourEnd={endTour}
+            onAsk={() => setAskOpen(true)}
           />
         </Suspense>
       </SceneErrorBoundary>
@@ -456,7 +462,7 @@ export function Home() {
         {!loading && <StampToast challenges={challenges} touch={touch} onOpenCard={() => setCardOpen(true)} />}
         {isInside && !loading && (
           <RoomQuips
-            active={!contentVisible && !pcOpen && !cardOpen && !tourOn}
+            active={!contentVisible && !pcOpen && !cardOpen && !tourOn && !askOpen}
             blocked={challenges.current !== null}
             touch={touch}
             stamps={challenges.requiredDone}
@@ -465,6 +471,7 @@ export function Home() {
             complete={challenges.complete}
           />
         )}
+        {askOpen && <AskLibrarian open onClose={() => setAskOpen(false)} />}
         <BorrowerCard
           open={cardOpen}
           onClose={() => setCardOpen(false)}

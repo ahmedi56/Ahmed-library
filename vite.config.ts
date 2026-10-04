@@ -1,6 +1,7 @@
 import { defineConfig, loadEnv, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import { searchExa } from './api/_exaSearch.ts'
+import { askLibrarian } from './api/_librarian.ts'
 
 /**
  * Dev-only search proxy for the in-room PC, backed by Exa (real web search,
@@ -30,6 +31,35 @@ function searchApiPlugin(env: Record<string, string>): Plugin {
         );
         res.statusCode = outcome.status;
         res.end(JSON.stringify('items' in outcome ? { items: outcome.items } : { error: outcome.error }));
+      });
+
+      // "Ask the librarian" — same arrangement: the logic lives in
+      // api/_librarian.ts, shared with the deployed api/librarian.ts.
+      server.middlewares.use('/api/librarian', (req, res) => {
+        res.setHeader('Content-Type', 'application/json');
+        if (req.method !== 'POST') {
+          res.statusCode = 405;
+          res.end(JSON.stringify({ error: 'Use POST.' }));
+          return;
+        }
+        let raw = '';
+        req.on('data', (chunk) => {
+          raw += chunk;
+          if (raw.length > 16_384) req.destroy();
+        });
+        req.on('end', async () => {
+          let messages: unknown;
+          try {
+            messages = JSON.parse(raw).messages;
+          } catch {
+            res.statusCode = 400;
+            res.end(JSON.stringify({ error: 'Malformed request.' }));
+            return;
+          }
+          const outcome = await askLibrarian(messages, env.ANTHROPIC_API_KEY, req.socket.remoteAddress ?? 'unknown');
+          res.statusCode = outcome.status;
+          res.end(JSON.stringify('answer' in outcome ? { answer: outcome.answer } : { error: outcome.error }));
+        });
       });
     },
   };

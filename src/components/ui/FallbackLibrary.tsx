@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import {
   Box,
   Download,
@@ -11,6 +11,7 @@ import {
   Palette,
   Mail,
   BookOpen,
+  MessageCircleQuestion,
   type LucideIcon,
 } from 'lucide-react';
 import { identity } from '../../data/books';
@@ -19,6 +20,9 @@ import { useResume } from '../../hooks/useResume';
 import { BookContent } from './BookContent';
 import { writeBookParam } from '../../lib/deepLink';
 import type { BookCategory } from '../../data/books';
+
+// Loaded on first open, so the light flat view stays light until then.
+const AskLibrarian = lazy(() => import('./AskLibrarian').then((m) => ({ default: m.AskLibrarian })));
 
 /**
  * One icon per section, so the cards are scannable at a glance instead of
@@ -63,6 +67,7 @@ export function FallbackLibrary({ onEnterRoom, initialBookId = null, notice = nu
   const [selectedId, setSelectedId] = useState<string | null>(initialBookId);
   const selected = books.find((b) => b.id === selectedId) ?? null;
   const resume = useResume(identity.resumeUrl);
+  const [askOpen, setAskOpen] = useState(false);
 
   useEffect(() => {
     writeBookParam(selected ? selected.id : null);
@@ -88,6 +93,13 @@ export function FallbackLibrary({ onEnterRoom, initialBookId = null, notice = nu
               {resume.downloading ? 'PREPARING…' : 'DOWNLOAD CV'}
             </button>
           )}
+          <button
+            onClick={() => setAskOpen(true)}
+            className="flex items-center gap-2 rounded-full border border-brass/50 px-4 py-2 text-xs tracking-[0.2em] text-oak transition hover:border-brass hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass"
+          >
+            <MessageCircleQuestion size={14} aria-hidden="true" />
+            ASK THE LIBRARIAN
+          </button>
           {onEnterRoom && (
             <button
               onClick={onEnterRoom}
@@ -152,6 +164,11 @@ export function FallbackLibrary({ onEnterRoom, initialBookId = null, notice = nu
       </div>
 
       <BookContent book={selected} visible={!!selected} onClose={() => setSelectedId(null)} />
+      {askOpen && (
+        <Suspense fallback={null}>
+          <AskLibrarian open onClose={() => setAskOpen(false)} />
+        </Suspense>
+      )}
     </div>
   );
 }

@@ -40,6 +40,7 @@ interface RoomViewProps {
   tourActive: boolean;
   onStartTour: () => void;
   onTourEnd: () => void;
+  onAsk: () => void;
 }
 
 /**
@@ -64,6 +65,7 @@ export function RoomView({
   tourActive,
   onStartTour,
   onTourEnd,
+  onAsk,
   ...scene
 }: RoomViewProps) {
   return (
@@ -77,6 +79,7 @@ export function RoomView({
           onOpenBook={onOpenBook}
           onSkipRoom={onSkipRoom}
           onStartTour={onStartTour}
+          onAsk={onAsk}
         />
         <GuidedTour active={tourActive} interaction={scene.interaction} onEnd={onTourEnd} />
       </ProjectShowcaseProvider>
@@ -86,7 +89,7 @@ export function RoomView({
 
 type SceneProps = Omit<
   RoomViewProps,
-  'onOpenBook' | 'onSkipRoom' | 'onDiscoverAnchor' | 'useVerb' | 'touch' | 'tourActive' | 'onStartTour' | 'onTourEnd'
+  'onOpenBook' | 'onSkipRoom' | 'onDiscoverAnchor' | 'useVerb' | 'touch' | 'tourActive' | 'onStartTour' | 'onTourEnd' | 'onAsk'
 >;
 
 /**
@@ -103,6 +106,7 @@ function ProjectObjects({
   onOpenBook,
   onSkipRoom,
   onStartTour,
+  onAsk,
 }: {
   onDiscoverAnchor: (id: string) => void;
   useVerb: string;
@@ -111,6 +115,7 @@ function ProjectObjects({
   onOpenBook: (id: string) => void;
   onSkipRoom: () => void;
   onStartTour: () => void;
+  onAsk: () => void;
 }) {
   const { projects } = useCustomization();
   // What the TV is showing right now, so the TV anchor speaks for the
@@ -167,7 +172,7 @@ function ProjectObjects({
         onHoverAnchor={handleHover}
         onOpenAnchor={openAnchor}
       />
-      <Navigation onOpenBook={onOpenBook} onSkipRoom={onSkipRoom} onStartTour={onStartTour} />
+      <Navigation onOpenBook={onOpenBook} onSkipRoom={onSkipRoom} onStartTour={onStartTour} onAsk={onAsk} />
 
       {/* Hidden while the full panel is up, so the two never stack. */}
       <ProjectPreview

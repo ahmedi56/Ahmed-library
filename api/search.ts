@@ -1,4 +1,5 @@
 import { searchExa } from './_exaSearch.ts';
+import { clientIdFrom } from './_rateLimit.ts';
 
 /**
  * Production endpoint for the in-room PC's search.
@@ -17,15 +18,7 @@ import { searchExa } from './_exaSearch.ts';
  */
 export default async function handler(request: Request): Promise<Response> {
   const q = new URL(request.url).searchParams.get('q') ?? '';
-  // Platform-set headers first: a client can send its own X-Forwarded-For,
-  // but Vercel (x-real-ip) and Netlify (x-nf-client-connection-ip) set
-  // theirs from the actual connection.
-  const h = request.headers;
-  const clientId =
-    h.get('x-real-ip') ??
-    h.get('x-nf-client-connection-ip') ??
-    h.get('x-forwarded-for')?.split(',')[0]?.trim() ??
-    'unknown';
+  const clientId = clientIdFrom(request.headers);
   const outcome = await searchExa(q, process.env.EXA_API_KEY, clientId);
   const body = 'items' in outcome ? { items: outcome.items } : { error: outcome.error };
 

@@ -1,3 +1,5 @@
+import { createLimiter } from './_rateLimit.ts';
+
 export interface SearchResultItem {
   title: string;
   link: string;
@@ -18,48 +20,12 @@ export type ExaOutcome =
  * calls this — it is never VITE_-prefixed and never reaches the bundle.
  *
  * The endpoint is public and every call spends the shared 20k/month Exa
- * quota, so it is capped below: a query length limit, a per-client rate,
- * and an overall rate. The counters live in memory, so on a serverless
- * host they are per warm instance, not global — enough to stop one
- * client looping on the endpoint, not a determined distributed attack.
- * The Exa dashboard's own usage cap is the hard backstop.
+ * quota, so it is capped: a query length limit, plus 10 searches a minute
+ * per client and 40 overall (see _rateLimit.ts for what those can and
+ * can't stop). The Exa dashboard's own usage cap is the hard backstop.
  */
 const MAX_QUERY_LENGTH = 200;
-const WINDOW_MS = 60_000;
-const PER_CLIENT_LIMIT = 10;
-const GLOBAL_LIMIT = 40;
-
-const clientHits = new Map<string, { count: number; resetAt: number }>();
-let globalHits = { count: 0, resetAt: 0 };
-
-/** Fixed-window counter. Returns false once the window's budget is spent. */
-function take(entry: { count: number; resetAt: number }, limit: number, now: number): boolean {
-  if (now >= entry.resetAt) {
-    entry.count = 0;
-    entry.resetAt = now + WINDOW_MS;
-  }
-  if (entry.count >= limit) return false;
-  entry.count += 1;
-  return true;
-}
-
-function allowRequest(clientId: string): boolean {
-  const now = Date.now();
-  // Drop expired entries so the map can't grow without bound.
-  if (clientHits.size > 5000) {
-    for (const [id, e] of clientHits) if (now >= e.resetAt) clientHits.delete(id);
-  }
-  let entry = clientHits.get(clientId);
-  if (!entry) {
-    entry = { count: 0, resetAt: now + WINDOW_MS };
-    clientHits.set(clientId, entry);
-  }
-  // Per-client first, so one client hammering the endpoint uses up only
-  // its own budget and not everyone else's share of the global one.
-  if (!take(entry, PER_CLIENT_LIMIT, now)) return false;
-  if (now >= globalHits.resetAt) globalHits = { count: 0, resetAt: now + WINDOW_MS };
-  return take(globalHits, GLOBAL_LIMIT, now);
-}
+const allowRequest = createLimiter({ windowMs: 60_000, perClient: 10, global: 40 });
 
 /** Only web links reach an `href` — a `javascript:` URL must never render. */
 function isWebUrl(url: string | undefined): url is string {
