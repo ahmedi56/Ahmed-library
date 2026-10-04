@@ -1,0 +1,90 @@
+@import "tailwindcss";
+
+@theme {
+  --font-serif: "Fraunces", "Georgia", serif;
+  --font-sans: "Inter", system-ui, sans-serif;
+
+  --color-paper: #f5efe4;
+  --color-ink: #241a10;
+  --color-walnut: #3a2e22;
+  --color-oak: #8b5e34;
+  --color-brass: #c9a05c;
+  --color-sage: #7a8b72;
+}
+
+@layer base {
+  html, body, #root {
+    height: 100%;
+  }
+
+  body {
+    margin: 0;
+    font-family: var(--font-sans);
+    background: var(--color-paper);
+    color: var(--color-ink);
+    overscroll-behavior: none;
+  }
+
+  ::selection {
+    background: var(--color-brass);
+    color: var(--color-paper);
+  }
+
+  :focus-visible {
+    outline-color: var(--color-brass);
+  }
+
+  /* No double-tap-to-zoom wait on taps (it delays every button by
+     ~300 ms on some mobile browsers), and a brass tap flash instead of the
+     platform's default grey-blue block. Pinch zoom is unaffected. */
+  a, button, input, textarea, select, label, [role="button"] {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: rgb(201 160 92 / 0.2);
+  }
+}
+
+@layer utilities {
+  .font-serif {
+    font-family: var(--font-serif);
+  }
+
+  .animate-fade-in {
+    animation: fade-in 0.25s ease-out;
+  }
+
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  /* Challenge stamps (BorrowerCard.tsx). Animates `transform`, which is
+     separate from the `translate` property Tailwind's -translate-x-1/2 sets,
+     so the slip stays centred while it drops in. */
+  .stamp-drop {
+    animation: stamp-drop 0.35s ease-out;
+  }
+
+  .stamp-press {
+    display: inline-flex;
+    animation: stamp-press 0.45s cubic-bezier(0.2, 1.4, 0.4, 1) 0.15s both;
+  }
+
+  @keyframes stamp-drop {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: none; }
+  }
+
+  @keyframes stamp-press {
+    from { opacity: 0; transform: scale(1.8); }
+    to { opacity: 1; transform: scale(1); }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

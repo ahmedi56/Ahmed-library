@@ -1,0 +1,65 @@
+rules_version = '2';
+
+// Security rules for the library portfolio.
+//
+// These are the only thing that actually protects the room. Everything in
+// the app — hiding the Settings button, checking the uid before a write —
+// is interface courtesy: the Firebase config ships in the client bundle
+// (by design), so anyone can open a console and call the SDK directly.
+// What they cannot do is get past this file.
+//
+// SETUP
+//   1. Sign in to the site once with ?admin=1 and copy your uid (Firebase
+//      console -> Authentication -> Users).
+//   2. Paste it into OWNER_UID below, and into VITE_OWNER_UID in the
+//      deploy environment so the UI knows to offer you the panel.
+//   3. Deploy:  firebase deploy --only firestore:rules
+//
+// Before this existed, `certificates` and `profile` were publicly
+// writable, so any visitor could replace the framed certificates and the
+// bedside photo for everyone who came afterwards, and `books` was
+// publicly writable because the app rewrote it on every page load.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function ownerUid() {
+      return 'iqDjcrw381PCFyJrWiO4qMXK7me2';
+    }
+
+    function isOwner() {
+      return request.auth != null && request.auth.uid == ownerUid();
+    }
+
+    // Framed certificates and the bedside photo: the world may look,
+    // only the owner may change them.
+    match /certificates/{id} {
+      allow read: if true;
+      allow write: if isOwner();
+    }
+
+    match /profile/{id} {
+      allow read: if true;
+      allow write: if isOwner();
+    }
+
+    // Wall TV slots: text and the video link, edited from the Settings panel.
+    match /projects/{id} {
+      allow read: if true;
+      allow write: if isOwner();
+    }
+
+    // Book content lives in src/data/books.ts and is compiled into the
+    // bundle. Nothing reads this collection any more and nothing should
+    // write it — denying outright means a stray client can't recreate it.
+    match /books/{id} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Anything not named above is closed.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
