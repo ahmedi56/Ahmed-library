@@ -71,6 +71,9 @@ test('room: deep link, stamps, borrower’s card', async ({ page }) => {
   const card = page.getByRole('dialog', { name: /Borrower.s card/ });
   await expect(card).toBeVisible();
   await expect(card).toContainText('Come in');
+  // One stamp is enough to share.
+  await expect(card.getByRole('button', { name: 'Share your card' })).toBeVisible();
+  await expect(card.getByRole('button', { name: 'Save as image' })).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(card).toBeHidden();
 

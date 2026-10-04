@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import { X, Download, Mail } from 'lucide-react';
+import { X, Download, Mail, Share2, ImageDown } from 'lucide-react';
 import { CHALLENGES, CARD_COMPLETE, type ChallengesApi } from '../../hooks/useChallenges';
 import { useCloseOnEscape } from '../../hooks/useCloseOnEscape';
 import { useDialogFocus } from '../../hooks/useDialogFocus';
 import { identity } from '../../data/books';
 import { playFanfare, playGhost, playStamp } from '../../lib/sfx';
+import { downloadCardImage, shareCard } from '../../lib/shareCard';
 
 const dateFmt = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short' });
 
@@ -118,11 +119,15 @@ interface BorrowerCardProps {
 export function BorrowerCard({ open, onClose, challenges, resumeAvailable, onDownloadResume }: BorrowerCardProps) {
   useCloseOnEscape(open, onClose);
   const [confirmClear, setConfirmClear] = useState(false);
+  const [shareNote, setShareNote] = useState<string | null>(null);
 
   // Same as SettingsPanel: free the cursor so the buttons work.
   useEffect(() => {
     if (open) document.exitPointerLock();
-    else setConfirmClear(false);
+    else {
+      setConfirmClear(false);
+      setShareNote(null);
+    }
   }, [open]);
 
   const panelRef = useRef<HTMLDivElement>(null);
@@ -131,6 +136,25 @@ export function BorrowerCard({ open, onClose, challenges, resumeAvailable, onDow
   if (!open) return null;
 
   const { earned, requiredDone, requiredTotal, rank, complete, reset } = challenges;
+  const summary = { earned, rank, requiredDone, requiredTotal, complete };
+
+  const onShare = async () => {
+    try {
+      const outcome = await shareCard(summary);
+      if (outcome === 'copied') setShareNote('Copied — paste it anywhere.');
+      else if (outcome === 'shared') setShareNote(null);
+    } catch {
+      setShareNote('Sharing is blocked here. Try “Save as image” instead.');
+    }
+  };
+  const onSaveImage = async () => {
+    try {
+      await downloadCardImage(summary);
+      setShareNote(null);
+    } catch {
+      setShareNote('Could not draw the image in this browser.');
+    }
+  };
   const pct = Math.round((requiredDone / requiredTotal) * 100);
 
   return (
@@ -175,8 +199,34 @@ export function BorrowerCard({ open, onClose, challenges, resumeAvailable, onDow
           <div className="h-full rounded-full bg-brass transition-[width] duration-700" style={{ width: `${pct}%` }} />
         </div>
 
+        {/* Sharing: worth offering from the first stamp, not only at the
+            end — "3 of 9, come and explore" is an invitation too. */}
+        {requiredDone > 0 && (
+          <div className="mt-4">
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => void onShare()}
+                className="flex items-center gap-1.5 rounded-full border border-brass/60 px-4 py-2 text-xs text-ink transition hover:bg-brass/15 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brass"
+              >
+                <Share2 size={13} aria-hidden="true" /> Share your card
+              </button>
+              <button
+                type="button"
+                onClick={() => void onSaveImage()}
+                className="flex items-center gap-1.5 rounded-full border border-ink/15 px-4 py-2 text-xs text-ink/70 transition hover:border-brass hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-brass"
+              >
+                <ImageDown size={13} aria-hidden="true" /> Save as image
+              </button>
+            </div>
+            <p className="mt-2 min-h-4 text-xs text-ink/55" aria-live="polite">
+              {shareNote}
+            </p>
+          </div>
+        )}
+
         {complete && (
-          <div className="mt-5 rounded-2xl border border-brass/40 bg-brass/10 p-4">
+          <div className="mt-3 rounded-2xl border border-brass/40 bg-brass/10 p-4">
             <p className="font-serif text-lg text-ink">You've seen everything.</p>
             <p className="mt-1 text-sm leading-relaxed text-ink/70">
               Thanks for taking the full tour. If you'd like to work together, I'd be glad to hear from you.
