@@ -240,6 +240,22 @@ bypassable there (global cap still holds). Deploy on Vercel/Netlify.
   real switch-on). Preview any with `?time=day|dusk|night`.
 - `npm install` reported audit warnings — not yet reviewed.
 
+### Session C, part 7 — shareable card + Ask the librarian
+- **Share your card / Save as image** on the borrower's card (from the
+  first stamp). `src/lib/shareCard.ts` draws a 1200×630 PNG in the browser;
+  sharing uses the native share sheet or copies text + link. No upload.
+- **Ask the librarian** (`api/_librarian.ts`, `api/librarian.ts`, dev
+  middleware in vite.config.ts, UI `src/components/ui/AskLibrarian.tsx`).
+  Claude Opus 5.5, effort low, grounded only in books.ts / projectVideos.ts /
+  identity; `fallbacks: "default"` (beta `server-side-fallback-2026-07-01`).
+  Limits: 400-char questions, last 8 turns (always starting on a question),
+  6/min + 60/day per visitor, 20/min + 400/day per instance.
+  **Needs `ANTHROPIC_API_KEY`** in .env (dev) and the host's env (prod), plus
+  a monthly spend limit in the Anthropic Console. Without it the panel says
+  it isn't set up. Verified with a mocked API (request shape, refusal,
+  trimming, limits) and in the browser; **no live answer tested yet.**
+- `api/_rateLimit.ts` now holds the limiter for both endpoints.
+
 ## 5. Bugs & risks — items 1–5 FIXED in Session C (kept for context)
 
 Ordered by how much they matter. None are regressions from the work above.
