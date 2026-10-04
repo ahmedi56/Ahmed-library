@@ -19,6 +19,23 @@ function openBook(page: Page) {
   return page.locator('[role="dialog"][aria-labelledby="book-content-title"]:not([inert])');
 }
 
+/**
+ * Headless Edge draws the 3D room in software (SwiftShader) on the CPU,
+ * which on a modest machine leaves the page busy enough that even plain
+ * timers run late — a 1.2 s book close was measured taking 5 s. A small
+ * viewport at the lowest quality tier keeps that load down; the room
+ * tests also get triple time via test.slow(). None of this reflects what
+ * a visitor with a GPU sees.
+ */
+async function freshRoom(page: Page) {
+  test.slow();
+  await page.setViewportSize({ width: 960, height: 600 });
+  await page.addInitScript(() => {
+    localStorage.clear();
+    localStorage.setItem('library-perf', 'low');
+  });
+}
+
 test('flat view: open a book and close it', async ({ page }) => {
   const errors = trackErrors(page);
   await page.addInitScript(() => localStorage.setItem('library-view', 'flat'));
@@ -37,7 +54,7 @@ test('flat view: open a book and close it', async ({ page }) => {
 
 test('room: deep link, stamps, borrower’s card', async ({ page }) => {
   const errors = trackErrors(page);
-  await page.addInitScript(() => localStorage.clear());
+  await freshRoom(page);
   await page.goto('/?book=about');
 
   // The 3D room loaded (not the flat fallback) and opened the linked book.
@@ -62,7 +79,7 @@ test('room: deep link, stamps, borrower’s card', async ({ page }) => {
 
 test('room: guided tour opens books in order and can be ended', async ({ page }) => {
   const errors = trackErrors(page);
-  await page.addInitScript(() => localStorage.clear());
+  await freshRoom(page);
   await page.goto('/?book=contact');
   await expect(openBook(page)).toContainText('Contact');
   await page.keyboard.press('Escape');
@@ -72,7 +89,7 @@ test('room: guided tour opens books in order and can be ended', async ({ page })
   const bar = page.getByRole('region', { name: 'Guided tour' });
   await expect(bar).toContainText('1 of 8');
   // The tour walks to the first book and opens it on its own.
-  await expect(openBook(page)).toContainText('About Me', { timeout: 20_000 });
+  await expect(openBook(page)).toContainText('About Me', { timeout: 60_000 });
 
   await bar.getByRole('button', { name: /END/ }).click();
   await expect(bar).toBeHidden();

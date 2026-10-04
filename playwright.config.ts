@@ -16,6 +16,9 @@ export default defineConfig({
   timeout: 90_000,
   expect: { timeout: 15_000 },
   fullyParallel: false,
+  // One retry: the 3D tests render on the CPU (see tests/smoke.spec.ts),
+  // and a momentarily busy machine can push a step past its timeout.
+  retries: 1,
   workers: 1,
   reporter: [['list']],
   use: {
