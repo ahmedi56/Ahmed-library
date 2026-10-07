@@ -7,7 +7,7 @@ import { useDialogFocus } from '../../hooks/useDialogFocus';
 import { projects as projectMeta } from '../../data/projects';
 import { identity } from '../../data/books';
 import { tourInput } from '../../lib/tourInput';
-import { TV_SCREEN_WORLD, TV_VIEW_STAND } from '../../lib/tvLayout';
+import { TV_SCREEN_WORLD, TV_VIEW_STAND, TV_VIEW_STAND_NARROW } from '../../lib/tvLayout';
 
 /**
  * The viewing mode: every project object in the room leads here.
@@ -58,7 +58,7 @@ export function ProjectTheatre({ slotId, onNavigate, onClose }: ProjectTheatrePr
       const fx = -Math.sin(o.yaw) * Math.cos(o.pitch);
       const fz = -Math.cos(o.yaw) * Math.cos(o.pitch);
       tourInput.lookAt = [o.x + fx * 2, -0.45 + Math.sin(o.pitch) * 2, o.z + fz * 2];
-      const far = Math.hypot(o.x - TV_VIEW_STAND[0], o.z - TV_VIEW_STAND[1]) > WALK_LIMIT;
+      const far = Math.hypot(o.x - tourInput.standX, o.z - tourInput.standZ) > WALK_LIMIT;
       if (far) tourInput.cut = true;
       // A timer, not requestAnimationFrame: rAF pauses in a background tab,
       // and a missed release would leave the visitor unable to move.
@@ -90,13 +90,15 @@ export function ProjectTheatre({ slotId, onNavigate, onClose }: ProjectTheatrePr
     origin.current = { ...tourInput.camera };
     tourInput.owner = 'theatre';
     const narrow = window.innerWidth < 900;
-    tourInput.standX = TV_VIEW_STAND[0];
-    tourInput.standZ = TV_VIEW_STAND[1];
+    const portrait = window.innerWidth < window.innerHeight;
+    const stand = portrait ? TV_VIEW_STAND_NARROW : TV_VIEW_STAND;
+    tourInput.standX = stand[0];
+    tourInput.standZ = stand[1];
     // Aim so the screen sits clear of the panel: left of it on wide
     // screens (+z is screen-right from here), above it on narrow ones.
     const [tx, ty, tz] = TV_SCREEN_WORLD;
-    tourInput.lookAt = narrow ? [tx, ty - 1.15, tz] : [tx, ty - 0.1, tz + 0.95];
-    const far = Math.hypot(tourInput.camera.x - TV_VIEW_STAND[0], tourInput.camera.z - TV_VIEW_STAND[1]) > WALK_LIMIT;
+    tourInput.lookAt = narrow ? [tx, ty - 1.0, tz] : [tx, ty - 0.1, tz + 0.95];
+    const far = Math.hypot(tourInput.camera.x - stand[0], tourInput.camera.z - stand[1]) > WALK_LIMIT;
     if (far) {
       setFading(true);
       const t = window.setTimeout(() => {

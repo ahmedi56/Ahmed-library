@@ -43,3 +43,10 @@ export const TV_SCREEN_WORLD: [number, number, number] = [
  * (lib/collision.ts: desk from z 1.02, shelf from x 3.75).
  */
 export const TV_VIEW_STAND: [number, number] = [1.35, 0.45];
+
+/**
+ * The same on a narrow (portrait) screen, whose horizontal view is far
+ * narrower: from 3 m the 2.8 m screen overflows it. About 4.6 m back, the
+ * whole screen fits; the line of sight still passes clear of the desk.
+ */
+export const TV_VIEW_STAND_NARROW: [number, number] = [-0.2, 0.6];
