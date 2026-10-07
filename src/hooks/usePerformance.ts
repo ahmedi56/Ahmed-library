@@ -11,8 +11,8 @@ export interface PerformanceProfile {
 }
 
 const PROFILES: Record<PerformanceTier, PerformanceProfile> = {
-  high: { tier: 'high', shadows: true, particles: 60, dpr: 1.75, postProcessing: true },
-  medium: { tier: 'medium', shadows: true, particles: 24, dpr: 1.25, postProcessing: false },
+  high: { tier: 'high', shadows: true, particles: 40, dpr: 1.75, postProcessing: true },
+  medium: { tier: 'medium', shadows: true, particles: 18, dpr: 1.25, postProcessing: false },
   low: { tier: 'low', shadows: false, particles: 0, dpr: 1, postProcessing: false },
 };
 

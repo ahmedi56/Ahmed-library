@@ -105,6 +105,11 @@ export function RoomQuips({ active, blocked, touch, stamps, total, rank, complet
       window.clearTimeout(idleTimer);
       if (shown.current >= MAX_QUIPS) return;
       idleTimer = window.setTimeout(() => {
+        // Reading a panel is not idling: never interrupt an open dialog.
+        if (document.querySelector('[role="dialog"][aria-modal="true"]:not([inert])')) {
+          arm();
+          return;
+        }
         const pool = QUIPS.map((q, i) => ({ q, i })).filter(
           ({ q, i }) => (!touch || !q.pointerOnly) && i !== lastIndex.current
         );

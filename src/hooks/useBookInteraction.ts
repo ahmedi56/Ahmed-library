@@ -13,8 +13,18 @@ export type BookState = 'idle' | 'hovered' | 'selected' | 'opening' | 'opened' |
 export function useBookInteraction() {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [phase, setPhase] = useState<BookState>('idle');
+  const [phase, setPhaseState] = useState<BookState>('idle');
   const timer = useRef<number | undefined>(undefined);
+  // The phase as of right now, not as of the last render. hover() runs from
+  // the crosshair's frame loop, which can still hold a callback from before
+  // select() re-rendered; checking a render-time copy let a late hover
+  // flip an opening book back to 'hovered' — on slow devices the book's
+  // panel then never opened, and the guided tour skipped a book.
+  const phaseRef = useRef<BookState>('idle');
+  const setPhase = useCallback((p: BookState) => {
+    phaseRef.current = p;
+    setPhaseState(p);
+  }, []);
 
   const clearTimer = () => {
     if (timer.current !== undefined) {
@@ -29,32 +39,37 @@ export function useBookInteraction() {
 
   const hover = useCallback(
     (id: string | null) => {
-      if (phase === 'idle' || phase === 'hovered') {
+      const now = phaseRef.current;
+      if (now === 'idle' || now === 'hovered') {
         setHoveredId(id);
         setPhase(id ? 'hovered' : 'idle');
       }
     },
-    [phase]
+    [setPhase]
   );
 
-  const select = useCallback((id: string) => {
-    clearTimer();
-    setSelectedId(id);
-    setPhase('opening');
-    setHoveredId(null);
-    // Grab -> carry -> open window (see BookPages.tsx / lib/bookAnimation.ts).
-    timer.current = window.setTimeout(() => setPhase('opened'), OPEN_TOTAL_MS);
-  }, []);
+  const select = useCallback(
+    (id: string) => {
+      clearTimer();
+      setSelectedId(id);
+      setPhase('opening');
+      setHoveredId(null);
+      // Grab -> carry -> open window (see BookPages.tsx / lib/bookAnimation.ts).
+      timer.current = window.setTimeout(() => setPhase('opened'), OPEN_TOTAL_MS);
+    },
+    [setPhase]
+  );
 
   const reset = useCallback(() => {
-    if (phase !== 'opening' && phase !== 'opened') return;
+    const now = phaseRef.current;
+    if (now !== 'opening' && now !== 'opened') return;
     clearTimer();
     setPhase('closing');
     timer.current = window.setTimeout(() => {
       setSelectedId(null);
       setPhase('idle');
     }, CLOSE_TOTAL_MS);
-  }, [phase]);
+  }, [setPhase]);
 
   const stateFor = useCallback(
     (id: string): BookState => {

@@ -52,7 +52,8 @@ import { useEntrance } from '../hooks/useEntrance';
 import { useBooks } from '../hooks/useBooks';
 import { isTouchDevice } from '../lib/touchInput';
 import { useResume } from '../hooks/useResume';
-import { readBookParam, writeBookParam } from '../lib/deepLink';
+import { readBookParam, writeBookParam, readProjectParam } from '../lib/deepLink';
+import { projects } from '../data/projects';
 import { identity } from '../data/books';
 import { PROJECT_ANCHORS } from '../data/projectAnchors';
 
@@ -67,6 +68,11 @@ export function Home() {
   // rather than out on the porch. Read once — later navigation shouldn't
   // re-trigger it.
   const deepLinkId = useRef(readBookParam()).current;
+  // ?project=<slug>: straight to that project on the TV. Unknown slugs are
+  // ignored, like unknown books.
+  const deepLinkProjectRaw = useRef(readProjectParam()).current;
+  const deepLinkProject =
+    deepLinkProjectRaw && projects.some((p) => p.slug === deepLinkProjectRaw) ? deepLinkProjectRaw : null;
 
   // The flat view is a choice now, not only a WebGL failure state, and the
   // choice is remembered. A visitor who opted out of the room once should
@@ -229,15 +235,18 @@ export function Home() {
   // shape leaves no trace behind on a discarded pass.
   const openedDeepLink = useRef(false);
   useEffect(() => {
-    if (openedDeepLink.current || !deepLinkBookId || flatView) return;
+    if (openedDeepLink.current || (!deepLinkBookId && !deepLinkProject) || flatView) return;
     const timer = window.setTimeout(() => {
       openedDeepLink.current = true;
       skipToInside();
       setDoorOpen(true);
-      selectBook(deepLinkBookId);
+      // A project link opens in the room itself (RoomView), not as a book,
+      // and the welcome text would only sit behind its panel.
+      if (deepLinkProject) setHasInteracted(true);
+      else if (deepLinkBookId) selectBook(deepLinkBookId);
     }, 0);
     return () => window.clearTimeout(timer);
-  }, [deepLinkBookId, flatView, skipToInside, selectBook]);
+  }, [deepLinkBookId, deepLinkProject, flatView, skipToInside, selectBook]);
 
   // Keep the address bar in step with whatever is open, so any section can
   // be copied out of the URL bar and sent to someone.
@@ -363,7 +372,8 @@ export function Home() {
         // No way back into a room that just failed — re-mounting it would
         // only fail again. A reload is the honest retry.
         onEnterRoom={webglSupported && !sceneFailed ? () => setFlatView(false) : undefined}
-        initialBookId={deepLinkBookId}
+        // The flat view has no TV; a project link opens the Projects book.
+        initialBookId={deepLinkBookId ?? (deepLinkProject ? 'projects' : null)}
         notice={sceneFailed ? 'The 3D room could not be loaded, so here is the plain version.' : null}
       />
     );
@@ -395,7 +405,8 @@ export function Home() {
             onDiscoverAnchor={discoverAnchor}
             useVerb={useVerb}
             touch={touch}
-            spawnInside={!!deepLinkBookId}
+            spawnInside={!!deepLinkBookId || !!deepLinkProject}
+            initialProject={deepLinkProject}
             onOpenBook={selectBook}
             onSkipRoom={() => setFlatView(true)}
             tourActive={tourOn && isInside}

@@ -266,6 +266,14 @@ export function CameraRig({ entrancePhase, doorOpen, reduced, onCrossThreshold, 
   useFrame((_, rawDelta) => {
     const delta = Math.min(rawDelta, 0.1);
 
+    if (!tourInput.active) {
+      const c = tourInput.camera;
+      c.x = camera.position.x;
+      c.z = camera.position.z;
+      c.yaw = yaw.current;
+      c.pitch = pitch.current;
+    }
+
     // Guided tour: the camera is on rails. It glides along a line in front
     // of the shelf that GuidedTour picks to be clear of all furniture, so
     // collision isn't consulted, and every other input is set aside —

@@ -64,6 +64,12 @@ export function GuidedTour({ active, interaction, onEnd }: GuidedTourProps) {
   // left on rails after the tour component goes away.
   useEffect(() => {
     if (!active) return;
+    // The project viewing mode has the camera; don't fight it for it.
+    if (tourInput.owner === 'theatre') {
+      onEnd();
+      return;
+    }
+    tourInput.owner = 'tour';
     document.exitPointerLock();
     // A book left open from before the tour closes first.
     if (phase === 'opening' || phase === 'opened') reset();

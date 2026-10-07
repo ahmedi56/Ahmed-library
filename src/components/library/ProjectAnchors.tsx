@@ -70,6 +70,10 @@ export function ProjectAnchors({ targeted, discovered, anyFound, active }: Proje
       const anchor = PROJECT_ANCHORS[i];
       const material = materials[i];
       if (!anchor || !material) return;
+      if (anchor.glowRadius === 0) {
+        child.visible = false;
+        return;
+      }
 
       const isTarget = targeted === anchor.id;
       // The single teaching hint: the first anchor in the list, shown only

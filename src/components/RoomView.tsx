@@ -1,8 +1,10 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { projects as projectList } from '../data/projects';
+import { writeProjectParam } from '../lib/deepLink';
 import { LibraryScene } from './library/LibraryScene';
 import { Navigation } from './ui/Navigation';
 import { ProjectPreview } from './ui/ProjectPreview';
-import { ProjectDetail } from './ui/ProjectDetail';
+import { ProjectTheatre } from './ui/ProjectTheatre';
 import { GuidedTour } from './ui/GuidedTour';
 import { CustomizationProvider, useCustomization } from '../hooks/useCustomization';
 import { PROJECT_ANCHORS, findAnchor } from '../data/projectAnchors';
@@ -41,6 +43,8 @@ interface RoomViewProps {
   onStartTour: () => void;
   onTourEnd: () => void;
   onAsk: () => void;
+  /** ?project= slug to open in the viewing mode on arrival. */
+  initialProject: string | null;
 }
 
 /**
@@ -66,6 +70,7 @@ export function RoomView({
   onStartTour,
   onTourEnd,
   onAsk,
+  initialProject,
   ...scene
 }: RoomViewProps) {
   return (
@@ -80,6 +85,7 @@ export function RoomView({
           onSkipRoom={onSkipRoom}
           onStartTour={onStartTour}
           onAsk={onAsk}
+          initialProject={initialProject}
         />
         <GuidedTour active={tourActive} interaction={scene.interaction} onEnd={onTourEnd} />
       </ProjectShowcaseProvider>
@@ -89,7 +95,7 @@ export function RoomView({
 
 type SceneProps = Omit<
   RoomViewProps,
-  'onOpenBook' | 'onSkipRoom' | 'onDiscoverAnchor' | 'useVerb' | 'touch' | 'tourActive' | 'onStartTour' | 'onTourEnd' | 'onAsk'
+  'onOpenBook' | 'onSkipRoom' | 'onDiscoverAnchor' | 'useVerb' | 'touch' | 'tourActive' | 'onStartTour' | 'onTourEnd' | 'onAsk' | 'initialProject'
 >;
 
 /**
@@ -107,6 +113,7 @@ function ProjectObjects({
   onSkipRoom,
   onStartTour,
   onAsk,
+  initialProject,
 }: {
   onDiscoverAnchor: (id: string) => void;
   useVerb: string;
@@ -116,6 +123,7 @@ function ProjectObjects({
   onSkipRoom: () => void;
   onStartTour: () => void;
   onAsk: () => void;
+  initialProject: string | null;
 }) {
   const { projects } = useCustomization();
   // What the TV is showing right now, so the TV anchor speaks for the
@@ -128,6 +136,29 @@ function ProjectObjects({
   // advances on a timer — reading it live meant aiming at one project,
   // pressing E, and being shown whichever had cycled in by then.
   const [opened, setOpened] = useState<{ anchorId: string; projectId: string } | null>(null);
+
+  // ?project= link: open that project on the TV shortly after arrival, once
+  // the camera has spawned (the viewing mode reads where it stands).
+  const linkHandled = useRef(false);
+  useEffect(() => {
+    if (linkHandled.current || !initialProject) return;
+    const i = projectList.findIndex((p) => p.slug === initialProject);
+    if (i < 0) return;
+    const t = window.setTimeout(() => {
+      linkHandled.current = true;
+      setOpened({ anchorId: 'tv', projectId: `project-${i + 1}` });
+    }, 600);
+    return () => window.clearTimeout(t);
+  }, [initialProject]);
+
+  // Keep the address bar on the project being viewed, so it can be shared.
+  const everOpened = useRef(false);
+  useEffect(() => {
+    if (opened) everOpened.current = true;
+    if (!everOpened.current) return;
+    const i = opened ? Number(opened.projectId.replace('project-', '')) - 1 : -1;
+    writeProjectParam(projectList[i]?.slug ?? null);
+  }, [opened]);
 
   const handleHover = useCallback(
     (id: string | null) => {
@@ -159,9 +190,6 @@ function ProjectObjects({
     [projectFor, showProject]
   );
 
-  const openedProject = opened
-    ? (projects.find((p) => p.id === opened.projectId) ?? null)
-    : null;
 
   return (
     <>
@@ -181,9 +209,10 @@ function ProjectObjects({
         useVerb={useVerb}
         touch={touch}
       />
-      <ProjectDetail
-        anchor={findAnchor(opened?.anchorId ?? null)}
-        project={openedProject}
+      {/* Every project object leads to the TV: the viewing mode. */}
+      <ProjectTheatre
+        slotId={opened?.projectId ?? null}
+        onNavigate={(projectId) => setOpened((o) => (o ? { ...o, projectId } : o))}
         onClose={() => setOpened(null)}
       />
     </>

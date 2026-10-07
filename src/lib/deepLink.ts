@@ -24,3 +24,24 @@ export function writeBookParam(id: string | null) {
   // the back button with history entries.
   window.history.replaceState(null, '', url.toString());
 }
+
+/**
+ * ?project=<slug> — a link straight to one project in the viewing mode
+ * (ui/ProjectTheatre.tsx); slugs come from data/projects.ts. Kept in step
+ * with whatever project is on screen, like ?book= is with the open book.
+ */
+const PROJECT_PARAM = 'project';
+
+export function readProjectParam(): string | null {
+  if (typeof window === 'undefined') return null;
+  const value = new URLSearchParams(window.location.search).get(PROJECT_PARAM);
+  return value && value.trim() ? value.trim().toLowerCase() : null;
+}
+
+export function writeProjectParam(slug: string | null) {
+  if (typeof window === 'undefined') return;
+  const url = new URL(window.location.href);
+  if (slug) url.searchParams.set(PROJECT_PARAM, slug);
+  else url.searchParams.delete(PROJECT_PARAM);
+  window.history.replaceState(null, '', url.toString());
+}

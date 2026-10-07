@@ -113,3 +113,27 @@ test('room: guided tour opens books in order and can be ended', async ({ page })
 
   expect(errors).toEqual([]);
 });
+
+test('room: a project link opens the TV viewing mode, browses, and returns', async ({ page }) => {
+  const errors = trackErrors(page);
+  await freshRoom(page);
+  await page.goto('/?project=freshly');
+
+  const panel = page.getByRole('dialog', { name: 'Freshly' });
+  await expect(panel).toBeVisible({ timeout: 30_000 });
+  await expect(panel).toContainText('Project 1 of 3');
+  await expect(panel).toContainText('Express');
+  await expect(page).toHaveURL(/project=freshly/);
+
+  // Browse with the keyboard; the address follows.
+  await page.keyboard.press('ArrowRight');
+  await expect(page.getByRole('dialog', { name: 'Prowise' })).toBeVisible();
+  await expect(page).toHaveURL(/project=prowise/);
+
+  // Esc returns to the room and clears the link.
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog', { name: 'Prowise' })).toBeHidden();
+  await expect(page).not.toHaveURL(/project=/);
+
+  expect(errors).toEqual([]);
+});

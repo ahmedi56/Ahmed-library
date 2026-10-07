@@ -17,8 +17,16 @@ interface ProjectShowcase {
   texture: THREE.VideoTexture;
   current: ProjectSlot | null;
   status: Status;
+  /** Position of `current` in the playlist, and its length. */
+  index: number;
+  count: number;
   /** Jump the TV to a specific slot, e.g. when its object is opened. */
   showProject: (projectId: string) => void;
+  /**
+   * Stop the slides advancing on their own, while someone is reading about
+   * the project on screen (the viewing panel); false resumes.
+   */
+  setHeld: (held: boolean) => void;
 }
 
 const ShowcaseContext = createContext<ProjectShowcase | null>(null);
@@ -66,6 +74,11 @@ function useShowcaseState(): ProjectShowcase {
   // remains the fallback when nothing has been saved.
   const { projects } = useCustomization();
   const [index, setIndex] = useState(0);
+  const [held, setHeld] = useState(false);
+  const heldRef = useRef(false);
+  useEffect(() => {
+    heldRef.current = held;
+  }, [held]);
   const [status, setStatus] = useState<Status>(projects.length > 0 ? 'loading' : 'unavailable');
   const consecutiveErrors = useRef(0);
 
@@ -108,7 +121,13 @@ function useShowcaseState(): ProjectShowcase {
       setStatus('playing');
     };
     const advance = () => setIndex((i) => (i + 1) % count);
-    const handleEnded = () => advance();
+    // While held, a finished clip replays instead of moving on.
+    const handleEnded = () => {
+      if (heldRef.current) {
+        video.currentTime = 0;
+        void video.play().catch(() => {});
+      } else advance();
+    };
     const handleError = () => {
       consecutiveErrors.current += 1;
       if (consecutiveErrors.current >= count) {
@@ -149,12 +168,12 @@ function useShowcaseState(): ProjectShowcase {
   );
 
   useEffect(() => {
-    if (status !== 'unavailable' || count <= 1) return;
+    if (held || status !== 'unavailable' || count <= 1) return;
     const id = window.setInterval(() => {
       setIndex((i) => (i + 1) % count);
     }, SLIDE_INTERVAL_MS);
     return () => window.clearInterval(id);
-  }, [status, count]);
+  }, [held, status, count]);
 
   // Opening a project object puts that project on the TV, so the physical
   // object, the information card and the screen all agree.
@@ -166,5 +185,5 @@ function useShowcaseState(): ProjectShowcase {
     [projects]
   );
 
-  return { texture, current: entry, status, showProject };
+  return { texture, current: entry, status, index, count, showProject, setHeld };
 }

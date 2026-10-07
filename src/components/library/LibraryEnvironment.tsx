@@ -1,7 +1,8 @@
-import { useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { timePalette } from '../../lib/timeOfDay';
+import { WINDOW_X, WINDOW_Y, WINDOW_W, WINDOW_H } from '../../lib/roomLayout';
 import {
   getRugTexture,
   getWallGradientTexture,
@@ -24,6 +25,7 @@ import {
   CASE_HEIGHT,
   CASE_DEPTH,
 } from '../../lib/bookLayout';
+import { TV_WIDTH, TV_HEIGHT, TV_BEZEL, TV_BODY_DEPTH, TV_CENTER_Y, TV_WALL_Z } from '../../lib/tvLayout';
 
 interface EnvironmentProps {
   quality: 'high' | 'medium' | 'low';
@@ -35,10 +37,6 @@ interface EnvironmentProps {
 // perfectly aligned — the whole opening is defined once, here. Restored to
 // centered now that the bookshelf/mantel has moved back to the right wall
 // (it was briefly shifted off-center to stay clear of a back-wall mantel).
-const WINDOW_X = -0.18;
-const WINDOW_Y = 0.65;
-const WINDOW_W = 1.8;
-const WINDOW_H = 2.6;
 const WINDOW_OPEN_HALF_W = WINDOW_W / 2 + 0.03;
 const WINDOW_OPEN_HALF_H = WINDOW_H / 2 + 0.03;
 
@@ -154,7 +152,7 @@ export function LibraryEnvironment({ quality, lampOn }: EnvironmentProps) {
       <Nightstand quality={quality} />
 
       {/* Fireplace surround dressing the (interactive) bookshelf on the right wall */}
-      <FireplaceMantel quality={quality} />
+      <FireplaceMantel />
 
       {/* Wall-mounted TV, centered above the mantel/bookshelf */}
       <WallTV quality={quality} />
@@ -687,9 +685,8 @@ function CertificateWall() {
  * Shares the shelf's exact transform (from bookLayout.ts) so it lines up
  * with the case regardless of where that ends up.
  */
-function FireplaceMantel({ quality }: { quality: 'high' | 'medium' | 'low' }) {
+function FireplaceMantel() {
   const stoneMat = useMemo(() => new THREE.MeshStandardMaterial({ color: '#cbbfa0', roughness: 0.82 }), []);
-  const darkMat = useMemo(() => new THREE.MeshStandardMaterial({ color: '#1c1712', roughness: 0.9 }), []);
   const brassMat = useMemo(
     () => new THREE.MeshStandardMaterial({ color: '#c9a05c', metalness: 0.85, roughness: 0.25 }),
     []
@@ -703,22 +700,13 @@ function FireplaceMantel({ quality }: { quality: 'high' | 'medium' | 'low' }) {
   const backZ = -CASE_DEPTH / 2;
   // Firebox sits recessed into the case front (not a floor grate) — the case
   // floats now, so nothing at floor level should read as "the fire."
-  const fireboxY = SHELF_BOTTOM + 0.09;
 
   return (
     <group position={[SHELF_GROUP_OFFSET_X, 0, SHELF_GROUP_OFFSET_Z]} rotation={[0, SHELF_GROUP_ROTATION_Y, 0]}>
-      {/* Firebox: dark recessed insert with a brass surround, set into the case front */}
-      <mesh position={[0, fireboxY, frontZ + 0.005]}>
-        <boxGeometry args={[0.56, 0.16, 0.02]} />
-        <primitive object={darkMat} attach="material" />
-      </mesh>
-      <mesh position={[0, fireboxY, frontZ + 0.016]}>
-        <boxGeometry args={[0.62, 0.02, 0.012]} />
-        <primitive object={brassMat} attach="material" />
-      </mesh>
-      {quality !== 'low' && (
-        <pointLight position={[0, fireboxY, frontZ + 0.06]} intensity={0.5} color="#e8763a" distance={1.4} decay={2} />
-      )}
+      {/* A firebox insert used to sit in the case front here, with an
+          orange point light: it put a fire glow under the books (the
+          site's main navigation) and read as "books in a fireplace". The
+          surround and mantel stay — they frame the shelf and carry the TV. */}
 
       {/* Wall corbel brackets: the visible support reading as what's actually
           holding the case up, in place of a floor-set hearth */}
@@ -751,110 +739,168 @@ function FireplaceMantel({ quality }: { quality: 'high' | 'medium' | 'low' }) {
 }
 
 /**
- * Wall-mounted TV, centered above the mantel — shares the bookshelf's exact
- * transform (bookLayout.ts) so it stays correctly positioned regardless of
- * where that ends up, same approach as FireplaceMantel/CertificateWall.
- * Mounted flush near the wall (unlike the mantel/hearth, which is proud of
- * it), well clear of the mantel shelf below and the ceiling above.
+ * The wall TV's screen, drawn on a canvas: one 16:9 slide per project in
+ * the room's own paper/ink/brass palette and type — large enough to read
+ * from across the room now that the screen is 2.8 m wide (lib/tvLayout.ts).
+ * Redrawn only when the project changes, never per frame.
+ *
+ * It used to draw a slide *and* a separate title bar that repeated the
+ * slide's title and stack, in a blue monospace look that matched nothing
+ * else on the site.
  */
-const TV_TITLE_CANVAS_W = 512;
-const TV_TITLE_CANVAS_H = 96;
+const TV_CANVAS_W = 1280;
+const TV_CANVAS_H = 720;
+const LOWER_THIRD_H = 220;
+const TV_INK = '#17110b';
+const TV_PAPER = '#f5efe4';
+const TV_BRASS = '#c9a05c';
 
-/** Redrawn only when the current project (or status) changes — not per frame. */
-function drawTvTitleBar(
-  ctx: CanvasRenderingContext2D,
-  state: { status: 'loading' | 'playing' | 'unavailable'; title: string; stack: string }
-) {
-  const w = TV_TITLE_CANVAS_W;
-  const h = TV_TITLE_CANVAS_H;
-  ctx.fillStyle = '#0a0e14';
-  ctx.fillRect(0, 0, w, h);
-  ctx.textBaseline = 'top';
-
-  ctx.font = '600 15px ui-monospace, Menlo, monospace';
-  ctx.fillStyle = '#5b8fd9';
-  ctx.fillText('AHMED · PROJECT SHOWCASE', 18, 12);
-
-  if (!state.title) {
-    ctx.font = '14px ui-monospace, Menlo, monospace';
-    ctx.fillStyle = '#5a6472';
-    ctx.fillText('No projects added yet', 18, 40);
-    return;
-  }
-
-  ctx.font = '600 20px ui-serif, Georgia, serif';
-  ctx.fillStyle = '#f2ede1';
-  ctx.fillText(state.title, 18, 38);
-  ctx.font = '14px ui-monospace, Menlo, monospace';
-  ctx.fillStyle = '#8ab4f8';
-  ctx.fillText(state.stack, 18, 66);
-}
-
-/** The main screen's fallback slide (title + stack + description), drawn whenever there's no video to play — this is the normal, permanent state until real screen-recordings are added, not an error state, so it reads as a designed showcase card rather than a "no signal" message. */
-function drawProjectSlide(
-  ctx: CanvasRenderingContext2D,
-  w: number,
-  h: number,
-  project: { title: string; stack: string; description: string } | null
-) {
-  ctx.clearRect(0, 0, w, h);
-  const gradient = ctx.createLinearGradient(0, 0, 0, h);
-  gradient.addColorStop(0, '#0d1420');
-  gradient.addColorStop(1, '#050810');
-  ctx.fillStyle = gradient;
-  ctx.fillRect(0, 0, w, h);
-
-  if (!project) {
-    ctx.textAlign = 'center';
-    ctx.fillStyle = '#3d4a5c';
-    ctx.font = '600 22px ui-monospace, Menlo, monospace';
-    ctx.fillText('NO PROJECTS YET', w / 2, h / 2);
-    return;
-  }
-
-  ctx.textAlign = 'left';
-  ctx.fillStyle = '#c9a05c';
-  ctx.font = '600 15px ui-monospace, Menlo, monospace';
-  ctx.fillText('FEATURED PROJECT', 32, 48);
-
-  ctx.fillStyle = '#f2ede1';
-  ctx.font = '600 34px ui-serif, Georgia, serif';
-  ctx.fillText(project.title, 32, 88);
-
-  ctx.fillStyle = '#8ab4f8';
-  ctx.font = '15px ui-monospace, Menlo, monospace';
-  ctx.fillText(project.stack, 32, 138);
-
-  ctx.fillStyle = '#c7cdd6';
-  ctx.font = '16px ui-serif, Georgia, serif';
-  const words = project.description.split(' ');
-  const maxWidth = w - 64;
+function wrapLines(ctx: CanvasRenderingContext2D, text: string, maxWidth: number, maxLines: number): string[] {
+  const words = text.split(/\s+/);
+  const lines: string[] = [];
   let line = '';
-  let y = 180;
+  let used = 0;
   for (const word of words) {
     const test = line ? `${line} ${word}` : word;
     if (ctx.measureText(test).width > maxWidth && line) {
-      ctx.fillText(line, 32, y);
+      lines.push(line);
       line = word;
-      y += 26;
+      if (lines.length === maxLines) break;
     } else {
       line = test;
     }
+    used += 1;
   }
-  if (line) ctx.fillText(line, 32, y);
+  if (lines.length < maxLines && line) lines.push(line);
+  // Ran out of room before the last word: end on an ellipsis.
+  if (used < words.length) lines[lines.length - 1] = `${lines[lines.length - 1]}…`;
+  return lines;
+}
+
+function drawProjectSlide(
+  ctx: CanvasRenderingContext2D,
+  project: { title: string; stack: string; description: string } | null,
+  position: { index: number; count: number }
+) {
+  const w = TV_CANVAS_W;
+  const h = TV_CANVAS_H;
+  const pad = 88;
+
+  // Ink ground with a faint warm falloff, like a lit screen in a dim room.
+  ctx.fillStyle = TV_INK;
+  ctx.fillRect(0, 0, w, h);
+  const glow = ctx.createRadialGradient(w * 0.3, h * 0.35, 40, w * 0.3, h * 0.35, w * 0.9);
+  glow.addColorStop(0, 'rgba(201,160,92,0.10)');
+  glow.addColorStop(1, 'rgba(201,160,92,0)');
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, w, h);
+  ctx.textBaseline = 'alphabetic';
+  ctx.textAlign = 'left';
+
+  if (!project) {
+    ctx.fillStyle = 'rgba(245,239,228,0.5)';
+    ctx.font = '500 44px Fraunces, Georgia, serif';
+    ctx.fillText('No projects on the shelf yet', pad, h / 2);
+    return;
+  }
+
+  ctx.fillStyle = TV_BRASS;
+  ctx.font = '500 26px Inter, system-ui, sans-serif';
+  ctx.fillText(`Project ${position.index + 1} of ${position.count}`, pad, pad + 10);
+
+  ctx.fillStyle = TV_PAPER;
+  ctx.font = '600 108px Fraunces, Georgia, serif';
+  ctx.fillText(project.title, pad - 4, pad + 140);
+
+  ctx.fillStyle = TV_BRASS;
+  ctx.font = '500 34px Inter, system-ui, sans-serif';
+  ctx.fillText(project.stack, pad, pad + 200);
+
+  ctx.fillStyle = 'rgba(245,239,228,0.82)';
+  ctx.font = '400 34px Inter, system-ui, sans-serif';
+  wrapLines(ctx, project.description, w - pad * 2, 4).forEach((line, i) => {
+    ctx.fillText(line, pad, pad + 290 + i * 50);
+  });
+
+  // One dot per project, the current one filled: there is more to see.
+  for (let i = 0; i < position.count; i++) {
+    ctx.beginPath();
+    ctx.arc(pad + 6 + i * 30, h - 70, 7, 0, Math.PI * 2);
+    if (i === position.index) {
+      ctx.fillStyle = TV_BRASS;
+      ctx.fill();
+    } else {
+      ctx.strokeStyle = 'rgba(201,160,92,0.55)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+  }
+}
+
+/** Shown over a playing video only: the project's name, once. */
+function drawLowerThird(ctx: CanvasRenderingContext2D, title: string, stack: string) {
+  const w = TV_CANVAS_W;
+  const h = LOWER_THIRD_H;
+  ctx.clearRect(0, 0, w, h);
+  const g = ctx.createLinearGradient(0, 0, 0, h);
+  g.addColorStop(0, 'rgba(23,17,11,0)');
+  g.addColorStop(1, 'rgba(23,17,11,0.85)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, w, h);
+  ctx.textBaseline = 'alphabetic';
+  ctx.textAlign = 'left';
+  ctx.fillStyle = TV_PAPER;
+  ctx.font = '600 52px Fraunces, Georgia, serif';
+  ctx.fillText(title, 72, h - 62);
+  ctx.fillStyle = TV_BRASS;
+  ctx.font = '500 26px Inter, system-ui, sans-serif';
+  ctx.fillText(stack, 72, h - 24);
+}
+
+/** A canvas + texture pair that redraws when `draw` changes and once the web fonts arrive. */
+function useCanvasTexture(width: number, height: number, draw: (ctx: CanvasRenderingContext2D) => void) {
+  const canvas = useMemo(() => {
+    const c = document.createElement('canvas');
+    c.width = width;
+    c.height = height;
+    return c;
+  }, [width, height]);
+  const texture = useMemo(() => {
+    const t = new THREE.CanvasTexture(canvas);
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.anisotropy = 4;
+    return t;
+  }, [canvas]);
+  useEffect(() => {
+    const paint = () => {
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      draw(ctx);
+      texture.needsUpdate = true;
+    };
+    paint();
+    // Canvas text drawn before Fraunces/Inter load falls back to Georgia;
+    // paint again once they're ready.
+    let live = true;
+    void document.fonts?.ready.then(() => {
+      if (live) paint();
+    });
+    return () => {
+      live = false;
+    };
+  }, [canvas, texture, draw]);
+  useEffect(() => () => texture.dispose(), [texture]);
+  return texture;
 }
 
 /**
- * Wall-mounted TV, centered above the mantel. Plays real video when a file
- * exists at a project's `src` (fed into the screen as a THREE.VideoTexture);
- * falls back to a designed canvas slide (title/stack/description) per
- * project, cycling on a timer, when it doesn't — see useProjectShowcase.ts.
- * A thin canvas-texture title bar along the bottom (project name + stack)
- * redraws only when the current project changes, not every frame — the
- * video texture is the only thing that needs a per-frame update.
+ * Wall-mounted TV over the bookcase (lib/tvLayout.ts has its size and
+ * place). Plays a project's video when one exists (a THREE.VideoTexture,
+ * with the name in a lower third); otherwise shows the project's slide.
+ * The playlist itself lives in useProjectShowcase.
  */
 function WallTV({ quality }: { quality: 'high' | 'medium' | 'low' }) {
-  const { texture: videoTexture, current, status } = useProjectShowcase();
+  const { texture: videoTexture, current, status, index, count } = useProjectShowcase();
 
   const bodyMat = useMemo(
     () => new THREE.MeshStandardMaterial({ color: '#16171b', roughness: 0.35, metalness: 0.4 }),
@@ -865,120 +911,66 @@ function WallTV({ quality }: { quality: 'high' | 'medium' | 'low' }) {
     []
   );
 
-  // Fallback screen — same canvas, reused as the video plane's own material
-  // whenever there's no video to play. No video files ship with the project,
-  // so this is the TV's normal, permanent state today: a designed slide per
-  // project (title/stack/description), cycling on the timer in
-  // useProjectShowcase, not a "no signal" error screen.
-  const idleCanvas = useMemo(() => {
-    const c = document.createElement('canvas');
-    c.width = 512;
-    c.height = 320;
-    return c;
-  }, []);
-  const idleTexture = useMemo(() => {
-    const t = new THREE.CanvasTexture(idleCanvas);
-    t.colorSpace = THREE.SRGBColorSpace;
-    return t;
-  }, [idleCanvas]);
-  useEffect(() => {
-    const ctx = idleCanvas.getContext('2d');
-    if (!ctx) return;
-    drawProjectSlide(ctx, idleCanvas.width, idleCanvas.height, current);
-    idleTexture.needsUpdate = true;
-  }, [idleCanvas, idleTexture, current]);
-
-  const screenMat = useMemo(
-    () =>
-      new THREE.MeshStandardMaterial({
-        color: '#000000',
-        emissive: '#ffffff',
-        emissiveIntensity: 0.7,
-        roughness: 0.2,
-        metalness: 0.05,
-      }),
-    []
+  const drawSlide = useCallback(
+    (ctx: CanvasRenderingContext2D) => drawProjectSlide(ctx, current, { index, count }),
+    [current, index, count]
   );
+  const slideTexture = useCanvasTexture(TV_CANVAS_W, TV_CANVAS_H, drawSlide);
+
+  const drawTitle = useCallback(
+    (ctx: CanvasRenderingContext2D) => drawLowerThird(ctx, current?.title ?? '', current?.stack ?? ''),
+    [current]
+  );
+  const lowerThirdTexture = useCanvasTexture(TV_CANVAS_W, LOWER_THIRD_H, drawTitle);
+
+  const playing = status === 'playing';
+
+  // Unlit: a screen gives off its own light, so the room's lights
+  // shouldn't shade it (they tinted the old screen grey at the edges).
+  const screenMat = useMemo(() => new THREE.MeshBasicMaterial({ toneMapped: false }), []);
   useEffect(() => {
-    const useVideo = status !== 'unavailable';
-    screenMat.map = useVideo ? videoTexture : idleTexture;
-    screenMat.emissiveMap = useVideo ? videoTexture : idleTexture;
+    screenMat.map = playing ? videoTexture : slideTexture;
     screenMat.needsUpdate = true;
-  }, [screenMat, videoTexture, idleTexture, status]);
-
-  const titleCanvas = useMemo(() => {
-    const c = document.createElement('canvas');
-    c.width = TV_TITLE_CANVAS_W;
-    c.height = TV_TITLE_CANVAS_H;
-    return c;
-  }, []);
-  const titleTexture = useMemo(() => {
-    const t = new THREE.CanvasTexture(titleCanvas);
-    t.colorSpace = THREE.SRGBColorSpace;
-    return t;
-  }, [titleCanvas]);
-  useEffect(() => {
-    const ctx = titleCanvas.getContext('2d');
-    if (!ctx) return;
-    drawTvTitleBar(ctx, { status, title: current?.title ?? '', stack: current?.stack ?? '' });
-    titleTexture.needsUpdate = true;
-  }, [titleCanvas, titleTexture, status, current]);
-  const titleMat = useMemo(
-    () => new THREE.MeshStandardMaterial({ map: titleTexture, emissive: '#ffffff', emissiveMap: titleTexture, emissiveIntensity: 0.6 }),
-    [titleTexture]
+  }, [screenMat, videoTexture, slideTexture, playing]);
+  const lowerThirdMat = useMemo(
+    () => new THREE.MeshBasicMaterial({ map: lowerThirdTexture, transparent: true, toneMapped: false }),
+    [lowerThirdTexture]
   );
 
-  // Only the video texture needs per-frame updates (the canvas ones are
-  // event-driven above); harmless if VideoTexture's own auto-update already
-  // covers it — this just guarantees it regardless of three.js version.
+  // The video texture is the only thing that needs a per-frame upload.
   useFrame(() => {
-    if (status === 'playing') videoTexture.needsUpdate = true;
+    if (playing) videoTexture.needsUpdate = true;
   });
 
-  const caseTopY = SHELF_BOTTOM + CASE_HEIGHT;
-  const mantelTopY = caseTopY + 0.06 + 0.035; // mantel shelf's own top, matching FireplaceMantel
-  const width = 1.7;
-  const height = 0.95;
-  const bodyDepth = 0.05;
-  const bezelT = 0.04;
-  const gapAboveMantel = 0.34;
-  const centerY = mantelTopY + gapAboveMantel + height / 2;
-  const wallZ = -CASE_DEPTH / 2 - 0.01;
-
-  const titleBarH = height * 0.16;
-  const videoH = height - bezelT * 2 - titleBarH;
-  const contentW = width - bezelT * 2;
+  const contentW = TV_WIDTH - TV_BEZEL * 2;
+  const contentH = TV_HEIGHT - TV_BEZEL * 2;
+  const lowerThirdH = (contentH * LOWER_THIRD_H) / TV_CANVAS_H;
+  const faceZ = TV_WALL_Z + TV_BODY_DEPTH / 2 + 0.002;
 
   return (
-    <group position={[SHELF_GROUP_OFFSET_X, centerY, SHELF_GROUP_OFFSET_Z]} rotation={[0, SHELF_GROUP_ROTATION_Y, 0]}>
+    <group position={[SHELF_GROUP_OFFSET_X, TV_CENTER_Y, SHELF_GROUP_OFFSET_Z]} rotation={[0, SHELF_GROUP_ROTATION_Y, 0]}>
       {/* Mounting bracket arm, wall to TV back */}
-      <mesh position={[0, 0, wallZ + bodyDepth / 2 - 0.035]} castShadow>
-        <boxGeometry args={[0.1, 0.07, 0.07]} />
+      <mesh position={[0, 0, TV_WALL_Z + TV_BODY_DEPTH / 2 - 0.035]}>
+        <boxGeometry args={[0.16, 0.1, 0.07]} />
         <primitive object={bracketMat} attach="material" />
       </mesh>
-      {/* TV body / bezel */}
-      <mesh position={[0, 0, wallZ]} castShadow>
-        <boxGeometry args={[width, height, bodyDepth]} />
+      <mesh position={[0, 0, TV_WALL_Z]} castShadow>
+        <boxGeometry args={[TV_WIDTH, TV_HEIGHT, TV_BODY_DEPTH]} />
         <primitive object={bodyMat} attach="material" />
       </mesh>
-      {/* Main screen: the project video (or the idle "no signal" canvas) */}
-      <mesh position={[0, titleBarH / 2, wallZ + bodyDepth / 2 + 0.002]}>
-        <planeGeometry args={[contentW, videoH]} />
+      <mesh position={[0, 0, faceZ]}>
+        <planeGeometry args={[contentW, contentH]} />
         <primitive object={screenMat} attach="material" />
       </mesh>
-      {/* Title bar: project name + stack, along the bottom */}
-      <mesh position={[0, -height / 2 + bezelT + titleBarH / 2, wallZ + bodyDepth / 2 + 0.002]}>
-        <planeGeometry args={[contentW, titleBarH]} />
-        <primitive object={titleMat} attach="material" />
-      </mesh>
+      {playing && (
+        <mesh position={[0, -contentH / 2 + lowerThirdH / 2, faceZ + 0.002]}>
+          <planeGeometry args={[contentW, lowerThirdH]} />
+          <primitive object={lowerThirdMat} attach="material" />
+        </mesh>
+      )}
       {quality !== 'low' && (
-        <pointLight
-          position={[0, 0, wallZ + 0.15]}
-          intensity={0.35}
-          color="#8a9aab"
-          distance={1.6}
-          decay={2}
-        />
+        // The screen's glow on the wall and mantel around it.
+        <pointLight position={[0, 0, TV_WALL_Z + 0.4]} intensity={0.45} color="#e9d6b4" distance={2.6} decay={2} />
       )}
     </group>
   );
@@ -1361,9 +1353,10 @@ function Desk({ quality }: { quality: 'high' | 'medium' | 'low' }) {
           side={THREE.DoubleSide}
         />
       </mesh>
+      {/* One lamp light. A second "bounce" point light used to sit under
+          it: barely visible, but every lit surface in the room paid for it
+          every frame. */}
       <pointLight position={[-0.5, 0.5, -0.2]} intensity={1.1} color="#f2c87a" distance={2.5} />
-      {/* Soft warm bounce from the lamp onto the desktop */}
-      <pointLight position={[-0.15, 0.12, -0.05]} intensity={0.35} color="#f6d9a0" distance={1.1} decay={2} />
 
       <Laptop />
 

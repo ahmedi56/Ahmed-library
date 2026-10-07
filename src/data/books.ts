@@ -1,3 +1,5 @@
+import { projects } from './projects.ts';
+
 export type BookCategory =
   | 'about'
   | 'projects'
@@ -54,33 +56,12 @@ export const books: BookData[] = [
     spineLabel: 'PROJECTS',
     description:
       "A few things I've designed and built end to end, on my own initiative and alongside my studies.",
-    items: [
-      {
-        title: 'Freshly: Cleaning Services Marketplace',
-        detail:
-          'Built independently: a single Express/SQLite API powering a Next.js web app for customers and admins, and an Expo mobile app for cleaners. Planned, built, and shipped solo.',
-      },
-      {
-        title: 'Prowise: Product Guide & Maintenance Platform',
-        detail:
-          'Built independently: a full guide platform for product technology, use, and maintenance, organizing four content types (video, PDF, step-by-step guides, repair info) into one clear structure.',
-      },
-      {
-        title: 'Spendora: Finance Mobile App',
-        detail:
-          'Team project (4+ students) as System & Interaction Designer: designed the use case, sequence, and class diagrams that turned the team’s idea into a plan we could actually build from.',
-      },
-
-      // ROOM FOR MORE PROJECTS — add entries here as you build them. The
-      // panel (ui/BookContent.tsx) scrolls, so the list has no fixed
-      // ceiling and no layout needs adjusting. To also give a project a
-      // slide on the wall TV, add a matching entry in data/projectVideos.ts.
-      //
-      // {
-      //   title: 'Project name',
-      //   detail: 'What it is, what you built, and what you owned.',
-      // },
-    ],
+    // Generated from data/projects.ts, the single list of projects — add
+    // new ones there and they appear here, on the TV and in the viewing panel.
+    items: projects.map((p) => ({
+      title: `${p.title}: ${p.tagline}`,
+      detail: `${p.role}. ${p.description}`,
+    })),
     status: 'ready',
     coverColor: '#5b4636',
     accentColor: '#c9a05c',

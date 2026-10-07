@@ -10,6 +10,8 @@
  */
 export const tourInput = {
   active: false,
+  /** Who is driving: the guided tour or the project viewing mode. One at a time. */
+  owner: null as 'tour' | 'theatre' | null,
   standX: 0,
   standZ: 0,
   /** World point to face. */
@@ -18,10 +20,17 @@ export const tourInput = {
   cut: false,
   /** Written by CameraRig: position and view have caught up with the target. */
   settled: false,
+  /**
+   * Written by CameraRig every frame while the visitor is in control: where
+   * they stand and look. The viewing mode reads it when it opens, so it can
+   * put them back there when it closes.
+   */
+  camera: { x: 0, z: 0, yaw: 0, pitch: 0 },
 };
 
 export function resetTourInput() {
   tourInput.active = false;
+  tourInput.owner = null;
   tourInput.cut = false;
   tourInput.settled = false;
 }

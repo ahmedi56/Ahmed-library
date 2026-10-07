@@ -1,6 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { books, identity } from '../src/data/books.ts';
-import { projectVideos } from '../src/data/projectVideos.ts';
+import { projects } from '../src/data/projects.ts';
 import { createLimiter } from './_rateLimit.ts';
 
 /**
@@ -54,8 +54,19 @@ const REFERENCE = [
       ...(b.items ?? []).map((i) => `- ${i.title}: ${i.detail}`),
     ].join('\n')
   ),
-  '## Wall TV project cards',
-  ...projectVideos.map((p) => `- ${p.title} [${p.stack}]: ${p.description}`),
+  '## Projects in detail',
+  ...projects.map((p) =>
+    [
+      `- ${p.title} (${p.tagline}). Role: ${p.role}.`,
+      p.technologies.length ? `  Technologies: ${p.technologies.join(', ')}.` : '  Technologies: not listed.',
+      `  ${p.description}`,
+      ...(p.highlights ?? []).map((h) => `  * ${h}`),
+      p.links?.github ? `  Code: ${p.links.github}` : '',
+      p.links?.live ? `  Live: ${p.links.live}` : '',
+    ]
+      .filter(Boolean)
+      .join('\n')
+  ),
 ].join('\n');
 
 const SYSTEM = `You are the librarian of Ahmed Jatlaoui's portfolio, a walkable 3D library where each book on the shelf covers one part of his work. Visitors — often recruiters — ask you about him.

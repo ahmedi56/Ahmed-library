@@ -60,7 +60,7 @@ export function ProjectPreview({ anchor, project, useVerb, touch }: ProjectPrevi
           </div>
 
           <p className="mt-3 border-t border-ink/10 pt-2 text-center text-[0.6rem] tracking-[0.25em] text-ink/45">
-            {useVerb} FOR DETAILS
+            {useVerb} TO VIEW ON THE TV
           </p>
         </div>
       )}

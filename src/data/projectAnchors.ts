@@ -41,7 +41,7 @@ export interface ProjectAnchor {
   radius: number;
   /** How close the player must be for it to respond at all. */
   maxDistance: number;
-  /** Radius of the soft highlight drawn around the object. */
+  /** Radius of the soft highlight drawn around the object; 0 for none. */
   glowRadius: number;
 }
 
@@ -62,11 +62,15 @@ export const PROJECT_ANCHORS: ProjectAnchor[] = [
     projectId: null,
     objectLabel: 'Wall TV',
     icon: 'screen',
-    // Screen face of the wall-mounted TV above the mantel.
-    position: [4.4, 0.88, 1.15],
-    radius: 0.7,
-    maxDistance: 4,
-    glowRadius: 0.95,
+    // Centre of the TV screen (lib/tvLayout.ts: TV_SCREEN_WORLD — kept as
+    // literals here because this file loads with the page, and tvLayout
+    // pulls in three.js). 2.8 m wide, so it answers from across the room.
+    position: [4.43, 0.97, 1.15],
+    radius: 1.0,
+    maxDistance: 7,
+    // No ring: a circle around a wide rectangle reads badly, and the lit
+    // screen plus the "press E" prompt already say it's interactive.
+    glowRadius: 0,
   },
   {
     id: 'deskBooks',

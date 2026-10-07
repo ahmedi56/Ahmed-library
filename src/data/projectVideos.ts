@@ -15,56 +15,21 @@ export interface ProjectVideo {
   src: string;
 }
 
-/**
- * The in-room TV's playlist (LibraryEnvironment.tsx: WallTV / useProjectShowcase).
- * Plays in order, loops back to the start after the last one. No video files
- * ship with the project yet, so the TV cycles through a designed slide per
- * project (title, stack, description) instead of playing dead video sources —
- * see useProjectShowcase.ts / the idle canvas in WallTV. Drop matching .mp4
- * files into public/videos/ later and real video takes over automatically.
- */
-export const projectVideos: ProjectVideo[] = [
-  {
-    title: 'Freshly',
-    stack: 'Express · SQLite · Next.js · Expo',
-    description:
-      'Cleaning-services marketplace, built end to end: one Express/SQLite API powering a Next.js web app for customers/admin and an Expo mobile app for cleaners.',
-    src: '/videos/freshly.mp4',
-  },
-  {
-    title: 'Prowise',
-    stack: 'Product Guide Platform',
-    description:
-      'A full guide platform for product technology, use, and maintenance, organizing four content types: video, PDF, step-by-step guides, and repair information.',
-    src: '/videos/prowise.mp4',
-  },
-  {
-    title: 'Spendora',
-    stack: 'System & Interaction Design',
-    description:
-      'Finance mobile app built with a team of four. Designed the use case, sequence, and class diagrams that turned the product idea into a plan the team could build from.',
-    src: '/videos/spendora.mp4',
-  },
+import { projects, stackLine } from './projects.ts';
 
-  // ---------------------------------------------------------------------
-  // ROOM FOR MORE PROJECTS — copy the block below, uncomment it, and fill
-  // it in. Nothing else needs editing: the slot id (`project-4`, then
-  // `project-5`, ...) is derived from this array's order, and it flows
-  // automatically to the TV playlist, the Settings panel's editable rows,
-  // and the Firestore seed. Leave `src` as '' to show the designed slide
-  // with no video.
-  //
-  // The one thing a new entry does NOT get is a physical object in the
-  // room to walk up to — those are hand-placed in data/projectAnchors.ts
-  // and each needs real world-space coordinates. Until you add one, the
-  // new project still appears in the wall TV's rotation (the TV anchor
-  // speaks for whatever is on screen), which is the intended fallback.
-  //
-  // {
-  //   title: 'Project name',
-  //   stack: 'Tech · stack · here',
-  //   description: 'One or two sentences shown on the TV slide.',
-  //   src: '',
-  // },
-  // ---------------------------------------------------------------------
-];
+/**
+ * The in-room TV's playlist (LibraryEnvironment.tsx: WallTV / useProjectShowcase),
+ * derived from data/projects.ts — add projects there, not here.
+ *
+ * Kept as its own shape because the TV slots are owner-editable from the
+ * Settings panel and saved to Firestore as { title, stack, description,
+ * src }; slot ids (`project-1`, `project-2`, ...) follow this array's order,
+ * which is projects.ts's order. With no video file, the TV shows a designed
+ * slide for the project instead.
+ */
+export const projectVideos: ProjectVideo[] = projects.map((p) => ({
+  title: p.title,
+  stack: stackLine(p),
+  description: p.description,
+  src: p.media?.video ?? '',
+}));

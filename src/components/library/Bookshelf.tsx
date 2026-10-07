@@ -39,8 +39,16 @@ export function Bookshelf({ stateFor, reduced, quality = 'high' }: BookshelfProp
   const backMat = useMemo(
     () =>
       new THREE.MeshStandardMaterial({
-        color: '#241a10',
-        map: quality === 'low' ? null : getWoodTexture('shelfBack', { base: '#241a10', grain: '#120c07', repeat: [3, 2] }),
+        // A lighter, warmer back than the frame, softly lit from within like
+        // a display shelf, so the dark spines read as silhouettes against
+        // it. It was near-black and sat in the mantel's shadow, and the
+        // books — the site's main navigation — disappeared into it.
+        // (The colour multiplies the texture, so it stays neutral and the
+        // texture carries the wood tone.) Emissive, not a light: free.
+        color: quality === 'low' ? '#8a6a48' : '#ffffff',
+        map: quality === 'low' ? null : getWoodTexture('shelfBack2', { base: '#8a6a48', grain: '#6b4f33', repeat: [3, 2] }),
+        emissive: '#5a3f22',
+        emissiveIntensity: 0.55,
         roughness: 0.8,
       }),
     [quality]
