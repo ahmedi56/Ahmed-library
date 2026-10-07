@@ -12,57 +12,87 @@ and walnut detailing.
 ## Stack
 
 React 19 + TypeScript + Vite, Three.js via React Three Fiber + drei, GSAP for
-the camera approach animation, Tailwind v4 for the HTML UI layer, lucide-react
-for icons.
+the book animations, Tailwind v4 for the HTML UI layer, lucide-react for
+icons, Firebase (Firestore + Google Auth) for the owner-editable room, and
+two serverless functions (`/api/search`, `/api/librarian`).
 
 ## Getting started
 
 ```bash
 npm install
-npm run dev       # start local dev server
-npm run build     # production build (runs tsc -b && vite build)
+npm run dev       # dev server, also serves /api/search and /api/librarian
+npm run build     # production build (tsc -b && vite build)
 npm run preview   # preview the production build
+npm run lint      # oxlint
+npm run test:e2e  # smoke tests (Playwright, uses the installed Microsoft Edge)
 ```
 
-## What's implemented (v1 scope)
+## What's in the room
 
-- 3D library environment: arch frame, floor, back/side walls, desk with
-  laptop/lamp/book stack, blue-hour window
-- Hero bookshelf with 8 data-driven books (`src/data/books.ts`), each with
-  slight organic variation in thickness/height/rotation
-- Book hover (pulls forward, tilts, highlights) and click (opens, shows
-  placeholder content panel)
-- Cinematic camera: idle mouse parallax + GSAP-eased approach on book select
-- Loading screen, intro overlay that fades after first interaction
-- Minimal top nav + full-screen menu overlay
-- Performance tiers (High / Medium / Low) — auto-detected from device
-  memory/cores, user-overridable, persisted to localStorage
-- `prefers-reduced-motion` respected (disables parallax, book easing snaps
-  instead of tweens)
-- WebGL-unsupported fallback: a 2.5D grid version of the same library that
-  stays fully navigable
+- **The shelf**: eight books, one per section (`src/data/books.ts`). Walk
+  up, look at one, press E (or tap USE) to open it.
+- **The wall TV and the viewing mode**: a 2.8 m screen cycling through the
+  projects. Pressing E on it, or on any project object in the room (the
+  cleaning set, the stack of manuals, the phone), walks the camera to a
+  viewing spot and opens a panel with the project's details, technologies
+  and links. ← → browse; Esc walks back. `?project=<slug>` links straight in.
+- **Guided tour** (TOUR button): the camera visits each book in turn.
+- **Ask the librarian** (ASK button): questions answered by Claude from the
+  site's own content (`api/_librarian.ts`).
+- **The PC**: a real web search (`api/_exaSearch.ts`), plus one question it
+  answers itself.
+- **Borrower's card** (J, or the counter top-left): stamps for exploring,
+  ranks, a secret or two, and a shareable card image.
+- Sound effects (synthesized, mutable), day/dusk/night by the visitor's
+  clock (`?time=day|dusk|night` to preview), idle jokes, a welcome-back
+  note for returning visitors.
+- Performance tiers (Low / Medium / High), auto-detected and switchable;
+  `prefers-reduced-motion` respected; a plain, fully navigable flat view
+  (SKIP) for anyone who doesn't want — or can't run — the 3D room.
+
+## Adding a project
+
+Projects are data, not 3D code. Open `src/data/projects.ts`, copy the
+commented template at the end of the list, fill it in, save. That's all:
+
+- it appears on the wall TV, in the Projects book, in the viewing panel's
+  list, and in what the librarian knows;
+- `slug` gives it a link: `/?project=<slug>`;
+- optional fields (`highlights`, `media.image`, `media.video`,
+  `links.github`, `links.live`) show only when filled — nothing empty or
+  made-up is ever displayed;
+- media files go in `public/` (e.g. `public/videos/my-project.mp4`, then
+  `media: { video: '/videos/my-project.mp4' }`). A video plays on the TV;
+  an image shows in the viewing panel.
+
+A new project doesn't get its own physical object in the room — those are
+hand-placed in `src/data/projectAnchors.ts` with world coordinates. It
+doesn't need one: the TV shows every project, and every object leads there.
+
+If you've edited a project's text in the Settings panel, that saved copy
+(Firestore) takes precedence over `projects.ts` for the TV's text.
 
 ## Architecture
 
 ```
 src/
 ├── components/
-│   ├── library/       3D scene: Bookshelf, Book, environment, lighting,
-│   │                  camera rig, dust particles, open-book pages
-│   └── ui/             HTML overlay: nav, intro, hover label, content
-│                        panel, loading screen, perf controls, fallback
-├── data/books.ts       Single source of truth for all book content
-├── hooks/               useBookInteraction (state machine), usePerformance,
-│                        useReducedMotion, useWebGLSupport
-└── pages/Home.tsx       Wires it all together
+│   ├── library/        3D scene: shelf, books, environment (walls, TV, desk…),
+│   │                   lighting, camera rig, crosshair interaction
+│   ├── ui/             HTML layer: navigation, book panel, viewing mode
+│   │                   (ProjectTheatre), tour, librarian, borrower's card…
+│   └── RoomView.tsx    The lazily loaded room: the only code that loads
+│                       three.js and Firebase. Keep it that way.
+├── data/               books.ts, projects.ts (single source for projects),
+│                       projectAnchors.ts (project objects' positions)
+├── hooks/              state: book interaction, customization (Firestore),
+│                       TV playlist, challenges, performance…
+├── lib/                shared helpers: tvLayout, tourInput (camera channel),
+│                       audio/sfx, deep links, time of day…
+└── pages/Home.tsx      wires it together
+api/                    serverless functions + their shared logic
+tests/                  Playwright smoke tests
 ```
-
-## Not yet implemented (deliberately out of scope for v1)
-
-Full section pages (About/Projects/etc. content), routing between sections,
-contact form backend, CMS/analytics — see the prompt's "first version scope."
-The `BookContent` panel currently shows a placeholder description per book;
-wiring real section routes is the natural next step.
 
 ## Deploying
 
@@ -78,6 +108,8 @@ serverless function.
      Settings panel says changes won't persist.
    - `VITE_OWNER_UID` — the only account allowed to edit the room. Empty
      means nobody can, which is the safe default.
+   - `ANTHROPIC_API_KEY` — server-side only, powers "Ask the librarian". Set
+     a monthly spend limit in the Anthropic Console too.
 
 2. **Lock down Firestore before sharing the link.** The Settings panel
    writes the certificate frames and the bedside photo into shared
@@ -96,16 +128,16 @@ serverless function.
    the real domain (canonical, `og:url`, `og:image`, `twitter:image` —
    these must be absolute), and drop a 1200x630 JPEG at
    `public/og-image.jpg`. See `public/og-image-README.txt`.
-4. **The search endpoint.** `api/search.ts` is a Web-standard
+4. **The endpoints.** `api/search.ts` and `api/librarian.ts` are Web-standard
    request/response handler, picked up automatically as a function by Vercel
    and by Netlify's Vite plugin. On a host that serves static files only, the
-   PC reports that search is unavailable rather than failing silently — the
-   rest of the room is unaffected.
+   PC and the librarian say they're unavailable rather than failing
+   silently — the rest of the room is unaffected.
 5. **Assets.** Everything in the 3D scene is generated at runtime (canvas
    textures, procedural geometry) — there are no model or texture files to
    ship. `public/videos/` is empty by design: drop `.mp4` files matching the
-   `src` paths in `src/data/projectVideos.ts` and the wall TV plays them,
-   otherwise it cycles designed project slides.
+   `media.video` paths in `src/data/projects.ts` and the wall TV plays them;
+   otherwise it shows each project's designed slide.
 6. **Routing.** Single page, no client router, so no SPA rewrite rule is
    needed beyond serving `dist/index.html` at `/`.
 7. **Fonts.** Body/heading type comes from Google Fonts and the book-spine

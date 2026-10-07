@@ -120,7 +120,8 @@ test('room: a project link opens the TV viewing mode, browses, and returns', asy
   await page.goto('/?project=freshly');
 
   const panel = page.getByRole('dialog', { name: 'Freshly' });
-  await expect(panel).toBeVisible({ timeout: 30_000 });
+  // Loading the room is the slowest step under CPU rendering.
+  await expect(panel).toBeVisible({ timeout: 60_000 });
   await expect(panel).toContainText('Project 1 of 3');
   await expect(panel).toContainText('Express');
   await expect(page).toHaveURL(/project=freshly/);

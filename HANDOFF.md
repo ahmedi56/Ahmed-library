@@ -256,6 +256,30 @@ bypassable there (global cap still holds). Deploy on Vercel/Netlify.
   trimming, limits) and in the browser; **no live answer tested yet.**
 - `api/_rateLimit.ts` now holds the limiter for both endpoints.
 
+### Session D (2026-10-07) — full audit; TV viewing mode; project data
+- **Projects are data**: `src/data/projects.ts` is the single source (TV
+  playlist via projectVideos.ts, Projects book, viewing panel, librarian).
+  CV facts only — Prowise has no technologies listed; no links/media yet.
+  How to add one: README → "Adding a project".
+- **TV**: 2.8 m 16:9 (`src/lib/tvLayout.ts`), lower; one redesigned slide
+  (paper/ink/brass, Fraunces/Inter, progress dots); name bar only over video;
+  unlit screen; playlist `setHeld` while viewing.
+- **Viewing mode** `ui/ProjectTheatre.tsx` (replaced ProjectDetail): every
+  project object → camera to TV viewing spot (`TV_VIEW_STAND`, portrait
+  `TV_VIEW_STAND_NARROW`), side panel / bottom sheet, tech chips that
+  highlight other projects using the same tech, ← →, Esc walks back.
+  `?project=<slug>` deep link. Camera ownership: `tourInput.owner`.
+- **Removed**: fireplace insert + orange light in the bookcase; desk lamp
+  bounce light; dust now only in the window shaft. Bookcase back lit.
+- **Fixed**: stale-phase race in useBookInteraction (late hover reverted
+  an opening book); `shadows={true}` = PCFSoft → warning flood (now
+  'percentage'); viewing-mode camera release used rAF (stuck in background
+  tabs) and didn't wait for the cut back.
+- **Perf**: post-processing lazy-loaded (High only): room chunk 353 → 333 kB gz.
+- Smoke tests: 4 (added viewing mode via ?project=).
+- Not done, recommended: read Firestore via REST for visitors and load the
+  Firebase SDK only for the owner (~157 kB gz off every room visit).
+
 ## 5. Bugs & risks — items 1–5 FIXED in Session C (kept for context)
 
 Ordered by how much they matter. None are regressions from the work above.
