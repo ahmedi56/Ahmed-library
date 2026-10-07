@@ -115,10 +115,6 @@ export function LibraryEnvironment({ quality, lampOn }: EnvironmentProps) {
           this gives the player their own light source independent of that. */}
       <DoorLamp on={lampOn} />
 
-      {/* Framed wall panels ("murs cadre") — wainscoting on the back wall,
-          freed up now that the shelf lives on the right wall instead. */}
-      <FramedWallPanels />
-
       {/* Side wall (subtle, camera-left) — extended to z = 8 to match the
           floor/ceiling's new depth, past the entrance. */}
       <mesh position={[-4.5, 1.5, 2]} rotation={[0, Math.PI / 2, 0]} receiveShadow>
@@ -545,58 +541,6 @@ function LightSwitch({ on }: { on: boolean }) {
         <circleGeometry args={[0.006, 10]} />
         <primitive object={indicatorMat} attach="material" />
       </mesh>
-    </group>
-  );
-}
-
-/** Wainscoting: a tiled band of raised-panel frames + a chair-rail cap on the back wall. */
-function FramedWallPanels() {
-  const frameMat = useMemo(() => new THREE.MeshStandardMaterial({ color: '#5b4636', roughness: 0.55 }), []);
-  const fillMat = useMemo(() => new THREE.MeshStandardMaterial({ color: '#4a3a2c', roughness: 0.75 }), []);
-
-  const bandBottom = -1.9;
-  const bandTop = -1.0;
-  const height = bandTop - bandBottom;
-  const midY = (bandBottom + bandTop) / 2;
-  const panelWidth = 0.7;
-  const gap = 0.18;
-  const step = panelWidth + gap;
-  const halfSpan = 4.1;
-  const count = Math.floor((halfSpan * 2) / step);
-  const startX = -((count - 1) * step) / 2;
-  const wallZ = -2.97;
-
-  return (
-    <group>
-      {/* Chair-rail cap along the top of the band */}
-      <mesh position={[0, bandTop + 0.03, wallZ]} castShadow>
-        <boxGeometry args={[halfSpan * 2 + 0.3, 0.05, 0.04]} />
-        <primitive object={frameMat} attach="material" />
-      </mesh>
-      {Array.from({ length: count }, (_, i) => startX + i * step).map((x, i) => (
-        <group key={i} position={[x, midY, wallZ]}>
-          <mesh position={[0, 0, -0.008]}>
-            <planeGeometry args={[panelWidth - 0.08, height - 0.08]} />
-            <primitive object={fillMat} attach="material" />
-          </mesh>
-          <mesh position={[0, height / 2 - 0.02, 0]}>
-            <boxGeometry args={[panelWidth, 0.04, 0.02]} />
-            <primitive object={frameMat} attach="material" />
-          </mesh>
-          <mesh position={[0, -height / 2 + 0.02, 0]}>
-            <boxGeometry args={[panelWidth, 0.04, 0.02]} />
-            <primitive object={frameMat} attach="material" />
-          </mesh>
-          <mesh position={[-panelWidth / 2 + 0.02, 0, 0]}>
-            <boxGeometry args={[0.04, height, 0.02]} />
-            <primitive object={frameMat} attach="material" />
-          </mesh>
-          <mesh position={[panelWidth / 2 - 0.02, 0, 0]}>
-            <boxGeometry args={[0.04, height, 0.02]} />
-            <primitive object={frameMat} attach="material" />
-          </mesh>
-        </group>
-      ))}
     </group>
   );
 }

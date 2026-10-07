@@ -6,8 +6,10 @@
  * Read once per page load from the local clock. `?time=day|dusk|night`
  * overrides it, for previews and screenshots.
  *
- * Dusk is the scene exactly as it was designed — every multiplier 1 and
- * every colour the original — so a dusk visitor sees no change at all.
+ * Dusk is the scene as it was designed — every multiplier 1 and every
+ * colour the original — except the window glass, which was raised for dusk
+ * and night: at its old values it read as a black hole in the wall rather
+ * than a sky.
  */
 export type TimeOfDay = 'day' | 'dusk' | 'night';
 
@@ -63,9 +65,9 @@ const PALETTES: Record<TimeOfDay, TimePalette> = {
     fillScale: 1.2,
   },
   dusk: {
-    glassColor: '#1c2c3d',
-    glassEmissive: '#3c5d78',
-    glassEmissiveScale: 1,
+    glassColor: '#24384d',
+    glassEmissive: '#4a7091',
+    glassEmissiveScale: 1.4,
     windowLightColor: '#5b7fa6',
     windowLightScale: 1,
     shaftColor: '#cfe0ee',
@@ -79,11 +81,11 @@ const PALETTES: Record<TimeOfDay, TimePalette> = {
     fillScale: 1,
   },
   night: {
-    glassColor: '#0b1220',
-    glassEmissive: '#1d2f4d',
-    glassEmissiveScale: 0.55,
+    glassColor: '#17253d',
+    glassEmissive: '#36598f',
+    glassEmissiveScale: 1.1,
     windowLightColor: '#41598a',
-    windowLightScale: 0.45,
+    windowLightScale: 0.6,
     shaftColor: '#8ea6cc',
     shaftOpacityScale: 0.35,
     exteriorColor: '#0d1520',

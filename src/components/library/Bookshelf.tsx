@@ -45,10 +45,13 @@ export function Bookshelf({ stateFor, reduced, quality = 'high' }: BookshelfProp
         // books — the site's main navigation — disappeared into it.
         // (The colour multiplies the texture, so it stays neutral and the
         // texture carries the wood tone.) Emissive, not a light: free.
-        color: quality === 'low' ? '#8a6a48' : '#ffffff',
-        map: quality === 'low' ? null : getWoodTexture('shelfBack2', { base: '#8a6a48', grain: '#6b4f33', repeat: [3, 2] }),
-        emissive: '#5a3f22',
-        emissiveIntensity: 0.55,
+        // The first pass (tan #8a6a48 + strong orange emissive) overshot: the
+        // whole back glowed flat orange like a lit display box. A mid walnut
+        // with a faint glow still separates the spines without the glare.
+        color: quality === 'low' ? '#76593c' : '#ffffff',
+        map: quality === 'low' ? null : getWoodTexture('shelfBack3', { base: '#76593c', grain: '#5a4129', repeat: [3, 2] }),
+        emissive: '#3d2a17',
+        emissiveIntensity: 0.45,
         roughness: 0.8,
       }),
     [quality]
