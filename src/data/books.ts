@@ -213,7 +213,7 @@ export const identity = {
   // Fill either in and it appears in the Contact book automatically; leave
   // it empty and nothing is rendered. Deliberately blank rather than
   // guessed — a wrong profile link is worse than no link.
-  github: '',
+  github: 'https://github.com/ahmedi56',
   linkedin: '',
 
   // Drop a PDF at public/cv/ under this name and the download button
