@@ -1,6 +1,8 @@
-import { Suspense, useRef } from 'react';
+import { lazy, Suspense, useRef } from 'react';
 import { Canvas } from '@react-three/fiber';
-import { EffectComposer, Vignette, BrightnessContrast, ToneMapping } from '@react-three/postprocessing';
+
+// Only the High tier uses post-processing; everyone else skips the download.
+const SceneEffects = lazy(() => import('./SceneEffects'));
 import { Bookshelf } from './Bookshelf';
 import { LibraryEnvironment } from './LibraryEnvironment';
 import { LibraryLighting } from './LibraryLighting';
@@ -88,7 +90,10 @@ export function LibraryScene({
       // "THREE.WebGLShadowMap: PCFSoftShadowMap has been deprecated" on
       // every shadow recompile, filling the console. Asking for the map
       // type it was already getting is the honest way to say the same thing.
-      shadows={profile.shadows}
+      // Note: `shadows={true}` is not that — R3F maps `true` to
+      // PCFSoftShadowMap, so the warning kept firing. 'percentage' is
+      // PCFShadowMap by name.
+      shadows={profile.shadows ? 'percentage' : false}
       dpr={profile.dpr}
       camera={{ fov: 72, near: 0.05, far: 40 }}
       // This used to pass logarithmicDepthBuffer: true, on the reasoning
@@ -160,11 +165,9 @@ export function LibraryScene({
       />
 
       {profile.postProcessing && (
-        <EffectComposer multisampling={0}>
-          <ToneMapping />
-          <BrightnessContrast brightness={0.01} contrast={0.06} />
-          <Vignette eskil={false} offset={0.18} darkness={0.55} />
-        </EffectComposer>
+        <Suspense fallback={null}>
+          <SceneEffects />
+        </Suspense>
       )}
     </Canvas>
   );
