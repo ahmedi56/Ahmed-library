@@ -17,6 +17,7 @@ import {
 import { identity } from '../../data/books';
 import { useBooks } from '../../hooks/useBooks';
 import { useResume } from '../../hooks/useResume';
+import { useLibrarianReady } from '../../hooks/useLibrarianReady';
 import { BookContent } from './BookContent';
 import { writeBookParam } from '../../lib/deepLink';
 import type { BookCategory } from '../../data/books';
@@ -68,6 +69,7 @@ export function FallbackLibrary({ onEnterRoom, initialBookId = null, notice = nu
   const selected = books.find((b) => b.id === selectedId) ?? null;
   const resume = useResume(identity.resumeUrl);
   const [askOpen, setAskOpen] = useState(false);
+  const librarianReady = useLibrarianReady();
 
   useEffect(() => {
     writeBookParam(selected ? selected.id : null);
@@ -93,13 +95,15 @@ export function FallbackLibrary({ onEnterRoom, initialBookId = null, notice = nu
               {resume.downloading ? 'PREPARING…' : 'DOWNLOAD CV'}
             </button>
           )}
-          <button
-            onClick={() => setAskOpen(true)}
-            className="flex items-center gap-2 rounded-full border border-brass/50 px-4 py-2 text-xs tracking-[0.2em] text-oak transition hover:border-brass hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass"
-          >
-            <MessageCircleQuestion size={14} aria-hidden="true" />
-            ASK THE LIBRARIAN
-          </button>
+          {librarianReady && (
+            <button
+              onClick={() => setAskOpen(true)}
+              className="flex items-center gap-2 rounded-full border border-brass/50 px-4 py-2 text-xs tracking-[0.2em] text-oak transition hover:border-brass hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass"
+            >
+              <MessageCircleQuestion size={14} aria-hidden="true" />
+              ASK THE LIBRARIAN
+            </button>
+          )}
           {onEnterRoom && (
             <button
               onClick={onEnterRoom}

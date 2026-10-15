@@ -26,8 +26,8 @@ interface NavigationProps {
   onSkipRoom: () => void;
   /** Starts the guided tour of the shelf. */
   onStartTour: () => void;
-  /** Opens "Ask the librarian". */
-  onAsk: () => void;
+  /** Opens "Ask the librarian". Omitted while the librarian isn't set up. */
+  onAsk?: () => void;
 }
 
 export function Navigation({ onOpenBook, onSkipRoom, onStartTour, onAsk }: NavigationProps) {
@@ -116,14 +116,16 @@ export function Navigation({ onOpenBook, onSkipRoom, onStartTour, onAsk }: Navig
             </button>
           )}
 
-          <button
-            onClick={onAsk}
-            aria-label="Ask the librarian"
-            className="flex items-center gap-2 rounded-full border border-brass/40 bg-paper/70 px-4 py-2 text-xs tracking-[0.2em] text-oak backdrop-blur-sm transition hover:border-brass hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass"
-          >
-            <MessageCircleQuestion size={14} aria-hidden="true" />
-            <span className="hidden sm:inline">ASK</span>
-          </button>
+          {onAsk && (
+            <button
+              onClick={onAsk}
+              aria-label="Ask the librarian"
+              className="flex items-center gap-2 rounded-full border border-brass/40 bg-paper/70 px-4 py-2 text-xs tracking-[0.2em] text-oak backdrop-blur-sm transition hover:border-brass hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass"
+            >
+              <MessageCircleQuestion size={14} aria-hidden="true" />
+              <span className="hidden sm:inline">ASK</span>
+            </button>
+          )}
 
           <button
             onClick={() => setOpen((v) => !v)}

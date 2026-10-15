@@ -84,6 +84,11 @@ ${REFERENCE}
 
 let client: Anthropic | null = null;
 
+/** Whether the endpoint can answer at all — what GET /api/librarian reports. */
+export function librarianReady(apiKey: string | undefined): boolean {
+  return !!apiKey;
+}
+
 function validate(raw: unknown): LibrarianTurn[] | string {
   if (!Array.isArray(raw) || raw.length === 0) return 'Ask a question first.';
   let turns = raw.slice(-MAX_TURNS);

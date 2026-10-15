@@ -52,6 +52,7 @@ import { useEntrance } from '../hooks/useEntrance';
 import { useBooks } from '../hooks/useBooks';
 import { isTouchDevice } from '../lib/touchInput';
 import { useResume } from '../hooks/useResume';
+import { useLibrarianReady } from '../hooks/useLibrarianReady';
 import { readBookParam, writeBookParam, readProjectParam } from '../lib/deepLink';
 import { projects } from '../data/projects';
 import { identity } from '../data/books';
@@ -176,6 +177,7 @@ export function Home() {
   }, []);
   const endTour = useCallback(() => setTourOn(false), []);
   const [askOpen, setAskOpen] = useState(false);
+  const librarianReady = useLibrarianReady();
 
   // Secret stamp: five lamp flicks inside three seconds.
   const lampFlicks = useRef<number[]>([]);
@@ -412,7 +414,7 @@ export function Home() {
             tourActive={tourOn && isInside}
             onStartTour={startTour}
             onTourEnd={endTour}
-            onAsk={() => setAskOpen(true)}
+            onAsk={librarianReady ? () => setAskOpen(true) : undefined}
           />
         </Suspense>
       </SceneErrorBoundary>

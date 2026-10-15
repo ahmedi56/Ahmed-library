@@ -54,7 +54,6 @@ export const projects: Project[] = [
       'One shared API serving both the web and the mobile app',
       'Database design, API architecture and both front ends, built solo',
     ],
-    media: { video: '/videos/freshly.mp4' },
   },
   {
     slug: 'prowise',
@@ -65,7 +64,6 @@ export const projects: Project[] = [
     role: 'Independent project',
     technologies: [],
     highlights: ['Four kinds of content, one navigable system', 'Complex information made usable for end users'],
-    media: { video: '/videos/prowise.mp4' },
   },
   {
     slug: 'spendora',
@@ -79,7 +77,6 @@ export const projects: Project[] = [
       'Use case, sequence and class diagrams',
       'Worked with the developers to fit the design to real implementation constraints',
     ],
-    media: { video: '/videos/spendora.mp4' },
   },
 
   // ---------------------------------------------------------------------

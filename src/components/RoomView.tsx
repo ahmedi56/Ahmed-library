@@ -42,7 +42,7 @@ interface RoomViewProps {
   tourActive: boolean;
   onStartTour: () => void;
   onTourEnd: () => void;
-  onAsk: () => void;
+  onAsk?: () => void;
   /** ?project= slug to open in the viewing mode on arrival. */
   initialProject: string | null;
 }
@@ -122,7 +122,7 @@ function ProjectObjects({
   onOpenBook: (id: string) => void;
   onSkipRoom: () => void;
   onStartTour: () => void;
-  onAsk: () => void;
+  onAsk?: () => void;
   initialProject: string | null;
 }) {
   const { projects } = useCustomization();

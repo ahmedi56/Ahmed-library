@@ -1,7 +1,7 @@
 import { defineConfig, loadEnv, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import { searchExa } from './api/_exaSearch.ts'
-import { askLibrarian } from './api/_librarian.ts'
+import { askLibrarian, librarianReady } from './api/_librarian.ts'
 
 /**
  * Dev-only search proxy for the in-room PC, backed by Exa (real web search,
@@ -37,6 +37,10 @@ function searchApiPlugin(env: Record<string, string>): Plugin {
       // api/_librarian.ts, shared with the deployed api/librarian.ts.
       server.middlewares.use('/api/librarian', (req, res) => {
         res.setHeader('Content-Type', 'application/json');
+        if (req.method === 'GET') {
+          res.end(JSON.stringify({ ready: librarianReady(env.ANTHROPIC_API_KEY) }));
+          return;
+        }
         if (req.method !== 'POST') {
           res.statusCode = 405;
           res.end(JSON.stringify({ error: 'Use POST.' }));

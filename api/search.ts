@@ -15,8 +15,13 @@ import { clientIdFrom } from './_rateLimit.ts';
  * If the host doesn't run functions at all (a purely static bucket), this
  * file is simply not deployed and the client reports the endpoint as
  * unavailable rather than pretending to search.
+ *
+ * Exported as `{ fetch }`: Vercel treats a bare default-exported function
+ * as a Node (req, res) handler, so `request.url` would be a bare path and
+ * `request.headers.get` wouldn't exist. `{ fetch }` and named GET/POST
+ * exports are the forms it documents for Web Request/Response handlers.
  */
-export default async function handler(request: Request): Promise<Response> {
+async function handler(request: Request): Promise<Response> {
   const q = new URL(request.url).searchParams.get('q') ?? '';
   const clientId = clientIdFrom(request.headers);
   const outcome = await searchExa(q, process.env.EXA_API_KEY, clientId);
@@ -27,3 +32,5 @@ export default async function handler(request: Request): Promise<Response> {
     headers: { 'Content-Type': 'application/json' },
   });
 }
+
+export default { fetch: handler };

@@ -50,17 +50,9 @@ test('flat view: open a book and close it', async ({ page }) => {
   await page.keyboard.press('Escape');
   await expect(dialog).toBeHidden();
 
-  // Ask the librarian. `vite preview` runs no serverless functions, so this
-  // also checks the panel says so plainly instead of breaking.
-  await page.getByRole('button', { name: /ASK THE LIBRARIAN/ }).click();
-  const ask = page.getByRole('dialog', { name: 'Ask the librarian' });
-  await expect(ask).toBeVisible();
-  await expect(ask.getByRole('textbox', { name: 'Your question' })).toBeFocused();
-  await ask.getByRole('button', { name: 'What has Ahmed built?' }).click();
-  await expect(ask.getByRole('alert')).toContainText('not available on this deployment');
-  await expect(ask.getByRole('textbox', { name: 'Your question' })).toHaveValue('What has Ahmed built?');
-  await page.keyboard.press('Escape');
-  await expect(ask).toBeHidden();
+  // Ask the librarian. `vite preview` runs no serverless functions, so the
+  // readiness check fails and the button must not be offered at all.
+  await expect(page.getByRole('button', { name: /ASK THE LIBRARIAN/ })).toHaveCount(0);
 
   expect(errors).toEqual([]);
 });
