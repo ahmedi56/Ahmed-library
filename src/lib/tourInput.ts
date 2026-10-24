@@ -1,17 +1,17 @@
 /**
- * Shared, mutable channel between the guided tour (DOM, GuidedTour.tsx)
+ * Shared, mutable channel between the tutorial (DOM, Tutorial.tsx)
  * and the walk camera (CameraRig.tsx) — the same pattern as touchInput.ts,
  * so the camera can be driven per frame without re-rendering anything.
  *
  * While `active`, CameraRig ignores walking and looking input and instead
  * glides to (standX, standZ) and turns to face `lookAt`. It reports back
- * through `settled` once it has arrived, which is the tour's cue to open
- * the book.
+ * through `settled` once it has arrived, which is the tutorial's cue to
+ * hold on what it is showing.
  */
 export const tourInput = {
   active: false,
-  /** Who is driving: the guided tour or the project viewing mode. One at a time. */
-  owner: null as 'tour' | 'theatre' | null,
+  /** Who is driving: the tutorial or the project viewing mode. One at a time. */
+  owner: null as 'tutorial' | 'theatre' | null,
   standX: 0,
   standZ: 0,
   /** World point to face. */

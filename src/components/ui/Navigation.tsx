@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Menu, X, Settings, Rows3, LogIn, LogOut, Footprints, MessageCircleQuestion } from 'lucide-react';
+import { Menu, X, Settings, Rows3, LogIn, LogOut, Gamepad2, MessageCircleQuestion } from 'lucide-react';
 import { SettingsPanel } from './SettingsPanel';
 import { useBooks } from '../../hooks/useBooks';
 import { useOwner } from '../../hooks/useOwner';
@@ -24,13 +24,13 @@ interface NavigationProps {
   onOpenBook: (id: string) => void;
   /** Leaves the 3D room for the flat, scrollable version of the same content. */
   onSkipRoom: () => void;
-  /** Starts the guided tour of the shelf. */
-  onStartTour: () => void;
+  /** Replays the tutorial. */
+  onStartTutorial: () => void;
   /** Opens "Ask the librarian". Omitted while the librarian isn't set up. */
   onAsk?: () => void;
 }
 
-export function Navigation({ onOpenBook, onSkipRoom, onStartTour, onAsk }: NavigationProps) {
+export function Navigation({ onOpenBook, onSkipRoom, onStartTutorial, onAsk }: NavigationProps) {
   const { books } = useBooks();
   const { ready, isOwner, signedIn, signIn, leave, error } = useOwner();
   const [open, setOpen] = useState(false);
@@ -69,14 +69,14 @@ export function Navigation({ onOpenBook, onSkipRoom, onStartTour, onAsk }: Navig
             <span className="hidden sm:inline">SKIP THE ROOM</span>
             <span className="sm:hidden">SKIP</span>
           </button>
-          {/* The middle road between walking it yourself and skipping it:
-              the room shows itself, book by book. */}
+          {/* Replays the first-visit tutorial (look, walk, open a book…). */}
           <button
-            onClick={onStartTour}
+            onClick={onStartTutorial}
             className="flex items-center gap-2 rounded-full border border-brass/40 bg-paper/70 px-4 py-2 text-xs tracking-[0.2em] text-oak backdrop-blur-sm transition hover:border-brass hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass"
           >
-            <Footprints size={14} aria-hidden="true" />
-            TOUR
+            <Gamepad2 size={14} aria-hidden="true" />
+            <span className="hidden sm:inline">TUTORIAL</span>
+            <span className="sm:hidden">HELP</span>
           </button>
         </div>
 
@@ -174,12 +174,12 @@ export function Navigation({ onOpenBook, onSkipRoom, onStartTour, onAsk }: Navig
             type="button"
             onClick={() => {
               setOpen(false);
-              onStartTour();
+              onStartTutorial();
             }}
             className="flex items-center gap-2 rounded-full border border-brass/50 px-5 py-2 text-xs tracking-[0.2em] text-brass transition hover:bg-brass hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass"
           >
-            <Footprints size={14} aria-hidden="true" />
-            TAKE THE GUIDED TOUR
+            <Gamepad2 size={14} aria-hidden="true" />
+            REPLAY THE TUTORIAL
           </button>
           <nav aria-label="Site sections" className="flex flex-col items-center gap-6">
             {/* These were five <a href="#"> that went nowhere — a dead menu on

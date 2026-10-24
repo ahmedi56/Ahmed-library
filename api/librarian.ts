@@ -1,5 +1,5 @@
-import { askLibrarian, librarianReady } from './_librarian.ts';
-import { clientIdFrom } from './_rateLimit.ts';
+import { askLibrarian, librarianConfig, librarianReady } from './_librarian.js';
+import { clientIdFrom } from './_rateLimit.js';
 
 /** A conversation is a few short strings; anything bigger isn't one. */
 const MAX_BODY_BYTES = 16_384;
@@ -14,7 +14,7 @@ async function handler(request: Request): Promise<Response> {
   const reply = (status: number, body: unknown) =>
     new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 
-  if (request.method === 'GET') return reply(200, { ready: librarianReady(process.env.ANTHROPIC_API_KEY) });
+  if (request.method === 'GET') return reply(200, { ready: librarianReady(librarianConfig(process.env)) });
   if (request.method !== 'POST') return reply(405, { error: 'Use POST.' });
 
   const text = await request.text();
@@ -26,7 +26,7 @@ async function handler(request: Request): Promise<Response> {
     return reply(400, { error: 'Malformed request.' });
   }
 
-  const outcome = await askLibrarian(body.messages, process.env.ANTHROPIC_API_KEY, clientIdFrom(request.headers));
+  const outcome = await askLibrarian(body.messages, librarianConfig(process.env), clientIdFrom(request.headers));
   return reply(outcome.status, 'answer' in outcome ? { answer: outcome.answer } : { error: outcome.error });
 }
 

@@ -1,4 +1,4 @@
-import { createLimiter } from './_rateLimit.ts';
+import { createLimiter } from './_rateLimit.js';
 
 export interface SearchResultItem {
   title: string;

@@ -274,9 +274,9 @@ export function CameraRig({ entrancePhase, doorOpen, reduced, onCrossThreshold, 
       c.pitch = pitch.current;
     }
 
-    // Guided tour: the camera is on rails. It glides along a line in front
-    // of the shelf that GuidedTour picks to be clear of all furniture, so
-    // collision isn't consulted, and every other input is set aside —
+    // Tutorial or viewing mode: the camera is on rails. It glides to a spot
+    // its driver picks to be clear of all furniture (the tutorial only turns
+    // in place), so collision isn't consulted, and every other input is set aside —
     // including interact, which would otherwise open whatever the
     // crosshair happened to cross on the way past.
     if (tourInput.active) {

@@ -1,5 +1,5 @@
-import { searchExa } from './_exaSearch.ts';
-import { clientIdFrom } from './_rateLimit.ts';
+import { searchExa } from './_exaSearch.js';
+import { clientIdFrom } from './_rateLimit.js';
 
 /**
  * Production endpoint for the in-room PC's search.

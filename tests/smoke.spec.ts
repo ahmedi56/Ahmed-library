@@ -85,23 +85,25 @@ test('room: deep link, stamps, borrower’s card', async ({ page }) => {
   expect(errors).toEqual([]);
 });
 
-test('room: guided tour opens books in order and can be ended', async ({ page }) => {
+test('room: the tutorial starts on a first visit, steps on, and can be skipped', async ({ page }) => {
   const errors = trackErrors(page);
   await freshRoom(page);
-  await page.goto('/?book=contact');
-  await expect(openBook(page)).toContainText('Contact');
-  await page.keyboard.press('Escape');
-  await expect(openBook(page)).toHaveCount(0);
+  await page.goto('/');
+  await page.getByRole('button', { name: 'ENTER THE LIBRARY' }).click();
 
-  await page.getByRole('button', { name: 'TOUR', exact: true }).click();
-  const bar = page.getByRole('region', { name: 'Guided tour' });
-  await expect(bar).toContainText('1 of 8');
-  // The tour walks to the first book and opens it on its own.
-  await expect(openBook(page)).toContainText('About Me', { timeout: 60_000 });
+  // Starts by itself once the door opens.
+  const bar = page.getByRole('region', { name: 'Tutorial' });
+  await expect(bar).toContainText('1/8', { timeout: 60_000 });
+  await bar.getByRole('button', { name: 'Next step' }).click();
+  await expect(bar).toContainText('2/8');
 
-  await bar.getByRole('button', { name: /END/ }).click();
+  await bar.getByRole('button', { name: /SKIP/ }).click();
   await expect(bar).toBeHidden();
-  await expect(openBook(page)).toHaveCount(0);
+  expect(await page.evaluate(() => localStorage.getItem('library-tutorial-v1'))).toBe('done');
+
+  // Replayable from the header.
+  await page.getByRole('button', { name: /TUTORIAL/ }).click();
+  await expect(bar).toContainText('1/8');
 
   expect(errors).toEqual([]);
 });

@@ -1,4 +1,4 @@
-import { projects } from './projects.ts';
+import { projects } from './projects.js';
 
 export type BookCategory =
   | 'about'

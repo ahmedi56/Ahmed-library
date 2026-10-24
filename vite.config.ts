@@ -1,7 +1,7 @@
 import { defineConfig, loadEnv, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import { searchExa } from './api/_exaSearch.ts'
-import { askLibrarian, librarianReady } from './api/_librarian.ts'
+import { askLibrarian, librarianConfig, librarianReady } from './api/_librarian.ts'
 
 /**
  * Dev-only search proxy for the in-room PC, backed by Exa (real web search,
@@ -38,7 +38,7 @@ function searchApiPlugin(env: Record<string, string>): Plugin {
       server.middlewares.use('/api/librarian', (req, res) => {
         res.setHeader('Content-Type', 'application/json');
         if (req.method === 'GET') {
-          res.end(JSON.stringify({ ready: librarianReady(env.ANTHROPIC_API_KEY) }));
+          res.end(JSON.stringify({ ready: librarianReady(librarianConfig(env)) }));
           return;
         }
         if (req.method !== 'POST') {
@@ -60,7 +60,7 @@ function searchApiPlugin(env: Record<string, string>): Plugin {
             res.end(JSON.stringify({ error: 'Malformed request.' }));
             return;
           }
-          const outcome = await askLibrarian(messages, env.ANTHROPIC_API_KEY, req.socket.remoteAddress ?? 'unknown');
+          const outcome = await askLibrarian(messages, librarianConfig(env), req.socket.remoteAddress ?? 'unknown');
           res.statusCode = outcome.status;
           res.end(JSON.stringify('answer' in outcome ? { answer: outcome.answer } : { error: outcome.error }));
         });

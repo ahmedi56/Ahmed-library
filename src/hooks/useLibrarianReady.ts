@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 
 /**
  * Whether "Ask the librarian" can answer: GET /api/librarian reports
- * { ready } (is ANTHROPIC_API_KEY set on the server). Without the key the
+ * { ready } (is LIBRARIAN_API_KEY set on the server). Without the key the
  * panel could only say it isn't set up, so the button stays hidden until
  * it can do something.
  *

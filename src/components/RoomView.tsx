@@ -5,7 +5,7 @@ import { LibraryScene } from './library/LibraryScene';
 import { Navigation } from './ui/Navigation';
 import { ProjectPreview } from './ui/ProjectPreview';
 import { ProjectTheatre } from './ui/ProjectTheatre';
-import { GuidedTour } from './ui/GuidedTour';
+import { Tutorial } from './ui/Tutorial';
 import { CustomizationProvider, useCustomization } from '../hooks/useCustomization';
 import { PROJECT_ANCHORS, findAnchor } from '../data/projectAnchors';
 import { ProjectShowcaseProvider, useProjectShowcase } from '../hooks/useProjectShowcase';
@@ -38,10 +38,12 @@ interface RoomViewProps {
   spawnInside: boolean;
   onOpenBook: (id: string) => void;
   onSkipRoom: () => void;
-  /** The guided tour is running (Home owns the switch). */
-  tourActive: boolean;
-  onStartTour: () => void;
-  onTourEnd: () => void;
+  /** The tutorial is running (Home owns the switch). */
+  tutorialActive: boolean;
+  onStartTutorial: () => void;
+  onTutorialEnd: () => void;
+  /** The borrower's card is open — the tutorial's last step waits on it. */
+  cardOpen: boolean;
   onAsk?: () => void;
   /** ?project= slug to open in the viewing mode on arrival. */
   initialProject: string | null;
@@ -66,9 +68,10 @@ export function RoomView({
   onDiscoverAnchor,
   useVerb,
   touch,
-  tourActive,
-  onStartTour,
-  onTourEnd,
+  tutorialActive,
+  onStartTutorial,
+  onTutorialEnd,
+  cardOpen,
   onAsk,
   initialProject,
   ...scene
@@ -83,11 +86,19 @@ export function RoomView({
           scene={scene}
           onOpenBook={onOpenBook}
           onSkipRoom={onSkipRoom}
-          onStartTour={onStartTour}
+          onStartTutorial={onStartTutorial}
           onAsk={onAsk}
           initialProject={initialProject}
         />
-        <GuidedTour active={tourActive} interaction={scene.interaction} onEnd={onTourEnd} />
+        <Tutorial
+          active={tutorialActive}
+          entrancePhase={scene.entrancePhase}
+          interaction={scene.interaction}
+          cardOpen={cardOpen}
+          touch={touch}
+          reduced={scene.reduced}
+          onEnd={onTutorialEnd}
+        />
       </ProjectShowcaseProvider>
     </CustomizationProvider>
   );
@@ -95,7 +106,7 @@ export function RoomView({
 
 type SceneProps = Omit<
   RoomViewProps,
-  'onOpenBook' | 'onSkipRoom' | 'onDiscoverAnchor' | 'useVerb' | 'touch' | 'tourActive' | 'onStartTour' | 'onTourEnd' | 'onAsk' | 'initialProject'
+  'onOpenBook' | 'onSkipRoom' | 'onDiscoverAnchor' | 'useVerb' | 'touch' | 'tutorialActive' | 'onStartTutorial' | 'onTutorialEnd' | 'cardOpen' | 'onAsk' | 'initialProject'
 >;
 
 /**
@@ -111,7 +122,7 @@ function ProjectObjects({
   scene,
   onOpenBook,
   onSkipRoom,
-  onStartTour,
+  onStartTutorial,
   onAsk,
   initialProject,
 }: {
@@ -121,7 +132,7 @@ function ProjectObjects({
   scene: SceneProps;
   onOpenBook: (id: string) => void;
   onSkipRoom: () => void;
-  onStartTour: () => void;
+  onStartTutorial: () => void;
   onAsk?: () => void;
   initialProject: string | null;
 }) {
@@ -200,7 +211,7 @@ function ProjectObjects({
         onHoverAnchor={handleHover}
         onOpenAnchor={openAnchor}
       />
-      <Navigation onOpenBook={onOpenBook} onSkipRoom={onSkipRoom} onStartTour={onStartTour} onAsk={onAsk} />
+      <Navigation onOpenBook={onOpenBook} onSkipRoom={onSkipRoom} onStartTutorial={onStartTutorial} onAsk={onAsk} />
 
       {/* Hidden while the full panel is up, so the two never stack. */}
       <ProjectPreview

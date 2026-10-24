@@ -108,8 +108,10 @@ serverless function.
      Settings panel says changes won't persist.
    - `VITE_OWNER_UID` — the only account allowed to edit the room. Empty
      means nobody can, which is the safe default.
-   - `ANTHROPIC_API_KEY` — server-side only, powers "Ask the librarian". Set
-     a monthly spend limit in the Anthropic Console too.
+   - `LIBRARIAN_API_KEY` — server-side only, powers "Ask the librarian"
+     (free Gemini key from aistudio.google.com/apikey). Without it the Ask
+     button is hidden. `LIBRARIAN_BASE_URL` / `LIBRARIAN_MODEL` switch to
+     another OpenAI-compatible provider — see `.env.example`.
 
 2. **Lock down Firestore before sharing the link.** The Settings panel
    writes the certificate frames and the bedside photo into shared

@@ -20,7 +20,7 @@ const SUGGESTIONS = [
 const MAX_QUESTION = 400;
 
 /**
- * "Ask the librarian": a short conversation with Claude about Ahmed,
+ * "Ask the librarian": a short conversation with an AI model about Ahmed,
  * answered from the site's own content (api/_librarian.ts holds the rules
  * and the reference text). Lazy-loaded by both the room and the flat
  * view; the conversation lasts as long as the page does.
@@ -186,7 +186,7 @@ export function AskLibrarian({ open, onClose }: { open: boolean; onClose: () => 
             </button>
           </div>
           <p className="mt-2 text-[0.7rem] leading-relaxed text-ink/45">
-            Answers are written by AI (Claude) from this site’s content and can be wrong. For anything
+            Answers are written by AI from this site’s content and can be wrong. For anything
             important, email{' '}
             <a href={`mailto:${identity.email}`} className="underline underline-offset-2 hover:text-ink">
               {identity.email}

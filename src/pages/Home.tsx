@@ -53,6 +53,7 @@ import { useBooks } from '../hooks/useBooks';
 import { isTouchDevice } from '../lib/touchInput';
 import { useResume } from '../hooks/useResume';
 import { useLibrarianReady } from '../hooks/useLibrarianReady';
+import { tutorialSeen } from '../lib/tutorialStorage';
 import { readBookParam, writeBookParam, readProjectParam } from '../lib/deepLink';
 import { projects } from '../data/projects';
 import { identity } from '../data/books';
@@ -165,17 +166,26 @@ export function Home() {
   const [cardOpen, setCardOpen] = useState(false);
   const { status: searchStatus } = usePCSearch();
 
-  // The guided tour (GuidedTour.tsx, in the room chunk). Using it at all
-  // this visit rules out Speed reader — the tour opens every book in about
-  // a minute and a half, which would hand out that stamp for free.
-  const [tourOn, setTourOn] = useState(false);
-  const tourUsed = useRef(false);
-  const startTour = useCallback(() => {
-    tourUsed.current = true;
+  // The tutorial (Tutorial.tsx, in the room chunk). It starts on its own
+  // the moment the door opens on a first visit — the visitor's first task
+  // is walking in — and can be replayed from the header or the menu.
+  // Deep links skip it: that visitor came for one specific thing.
+  const [tutorialOn, setTutorialOn] = useState(false);
+  const tutorialOffered = useRef(false);
+  const startTutorial = useCallback(() => {
+    tutorialOffered.current = true;
+    if (entrancePhase === 'outside') enter();
     setHasInteracted(true);
-    setTourOn(true);
-  }, []);
-  const endTour = useCallback(() => setTourOn(false), []);
+    setTutorialOn(true);
+  }, [entrancePhase, enter]);
+  const endTutorial = useCallback(() => setTutorialOn(false), []);
+  useEffect(() => {
+    if (entrancePhase !== 'walking' || tutorialOffered.current) return;
+    tutorialOffered.current = true;
+    if (tutorialSeen() || deepLinkBookId || deepLinkProject) return;
+    setHasInteracted(true);
+    setTutorialOn(true);
+  }, [entrancePhase, deepLinkBookId, deepLinkProject]);
   const [askOpen, setAskOpen] = useState(false);
   const librarianReady = useLibrarianReady();
 
@@ -296,7 +306,7 @@ export function Home() {
     earn('first-book');
     if (books.length > 0 && books.every((b) => openedBooks.has(b.id))) {
       earn('bookworm');
-      if (!tourUsed.current && enteredAt.current !== null && Date.now() - enteredAt.current < 3 * 60_000) {
+      if (enteredAt.current !== null && Date.now() - enteredAt.current < 3 * 60_000) {
         earn('speed');
       }
     }
@@ -411,9 +421,10 @@ export function Home() {
             initialProject={deepLinkProject}
             onOpenBook={selectBook}
             onSkipRoom={() => setFlatView(true)}
-            tourActive={tourOn && isInside}
-            onStartTour={startTour}
-            onTourEnd={endTour}
+            tutorialActive={tutorialOn}
+            onStartTutorial={startTutorial}
+            onTutorialEnd={endTutorial}
+            cardOpen={cardOpen}
             onAsk={librarianReady ? () => setAskOpen(true) : undefined}
           />
         </Suspense>
@@ -460,7 +471,7 @@ export function Home() {
       )}
 
       <EntranceHint visible={!loading && entrancePhase === 'outside'} onOpen={enter} />
-      <LibraryIntro visible={!loading && isInside && !hasInteracted} touch={touch} reduced={reduced} />
+      <LibraryIntro visible={!loading && isInside && !hasInteracted && !tutorialOn} touch={touch} reduced={reduced} />
       <BookLabel book={phase === 'hovered' ? hoveredBook : null} />
       <BookContent book={selectedBook} visible={contentVisible} onClose={interaction.reset} />
       <PCSearch open={pcOpen} onClose={() => setPcOpen(false)} onHireQuestion={() => earn('good-taste')} />
@@ -475,7 +486,7 @@ export function Home() {
         {!loading && <StampToast challenges={challenges} touch={touch} onOpenCard={() => setCardOpen(true)} />}
         {isInside && !loading && (
           <RoomQuips
-            active={!contentVisible && !pcOpen && !cardOpen && !tourOn && !askOpen}
+            active={!contentVisible && !pcOpen && !cardOpen && !tutorialOn && !askOpen}
             blocked={challenges.current !== null}
             touch={touch}
             stamps={challenges.requiredDone}
@@ -512,7 +523,7 @@ export function Home() {
       {/* Walk + interact controls for phones/tablets, where there is no
           WASD and no Pointer Lock. Renders nothing on pointer devices, or
           before the entrance sequence starts (see TouchControls). */}
-      <TouchControls active={entrancePhase !== 'outside' && !tourOn} />
+      <TouchControls active={entrancePhase !== 'outside'} />
     </div>
   );
 }
