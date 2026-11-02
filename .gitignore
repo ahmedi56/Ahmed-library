@@ -31,3 +31,6 @@ dist-ssr
 # Playwright
 test-results/
 playwright-report/
+
+# Local before/after screenshots
+screenshots/

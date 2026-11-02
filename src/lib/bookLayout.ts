@@ -1,15 +1,16 @@
 import { BOOK_HEIGHT } from '../components/library/Book';
 import type { BookData } from '../data/books';
 
-// Still the RIGHT wall (x = 4.5), but now centered along its open run rather
-// than sitting close to the back corner. That run is the back wall (z = -3)
-// to the entrance wall (z = 5.3) = 8.3 long, centered at z = 1.15 — clear of
-// the desk (x 1.02–2.78, nowhere near x = 4.5) in both directions.
-export const SHELF_GROUP_OFFSET_X = 4.45 - 0.46 / 2;
-export const SHELF_GROUP_OFFSET_Z = 1.15;
-// -90°: local +Z (the case's front/brass-trim face, where books read outward)
-// rotates to face -X — into the room, away from the wall at x = 4.5.
-export const SHELF_GROUP_ROTATION_Y = -Math.PI / 2;
+// The BACK wall (z = -3), centred, facing the entrance: the shelf is the
+// site's navigation and the TV above it carries the projects, so they are
+// the first thing a visitor sees on walking in. On the right wall they sat
+// off to the side of the entry view, and the window took the centre.
+// The case's back sits 0.05 off the wall, like the baseboard.
+export const SHELF_GROUP_OFFSET_X = 0;
+export const SHELF_GROUP_OFFSET_Z = -2.95 + 0.46 / 2;
+// 0: local +Z (the case's front/brass-trim face, where books read outward)
+// already faces +Z — into the room, toward the entrance.
+export const SHELF_GROUP_ROTATION_Y = 0;
 
 // Floor is at y = -2.05 (LibraryEnvironment.tsx). The case is a floating,
 // wall-mounted mantel — not floor-standing — so its bottom board sits a fixed

@@ -65,7 +65,7 @@ export const PROJECT_ANCHORS: ProjectAnchor[] = [
     // Centre of the TV screen (lib/tvLayout.ts: TV_SCREEN_WORLD — kept as
     // literals here because this file loads with the page, and tvLayout
     // pulls in three.js). 2.8 m wide, so it answers from across the room.
-    position: [4.43, 0.97, 1.15],
+    position: [0, 0.97, -2.935],
     radius: 1.0,
     maxDistance: 7,
     // No ring: a circle around a wide rectangle reads badly, and the lit

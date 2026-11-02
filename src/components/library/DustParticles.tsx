@@ -1,7 +1,7 @@
 import { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { WINDOW_X, WINDOW_W, BACK_WALL_Z } from '../../lib/roomLayout';
+import { WINDOW_WALL_X, WINDOW_Z, WINDOW_W } from '../../lib/roomLayout';
 
 interface DustProps {
   count: number;
@@ -17,9 +17,10 @@ export function DustParticles({ count }: DustProps) {
     // Spread through the middle of the room, the specks drifted in front
     // of the TV and the books and read as dead pixels.
     for (let i = 0; i < count; i++) {
-      pos[i * 3] = WINDOW_X + (Math.random() - 0.5) * WINDOW_W * 0.8;
+      // The window is in the right wall: the shaft runs along -x from it.
+      pos[i * 3] = WINDOW_WALL_X - 0.3 - Math.random() * 1.8;
       pos[i * 3 + 1] = Math.random() * 3 - 1;
-      pos[i * 3 + 2] = BACK_WALL_Z + 0.3 + Math.random() * 1.8;
+      pos[i * 3 + 2] = WINDOW_Z + (Math.random() - 0.5) * WINDOW_W * 0.8;
       spd[i] = 0.0004 + Math.random() * 0.0009;
     }
     return { positions: pos, speeds: spd };

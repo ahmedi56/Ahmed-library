@@ -114,11 +114,11 @@ export function Tutorial({ active, entrancePhase, interaction, cardOpen, touch, 
     if (!active || !target.current) return;
     let hold: number | undefined;
     let begun = 0;
-    // The viewing mode may have the camera; wait for it rather than fight.
+    // The viewing mode or "Go to" may have the camera; wait rather than fight.
     const poll = window.setInterval(() => {
       if (!target.current) return;
       if (!begun) {
-        if (tourInput.owner === 'theatre') return;
+        if (tourInput.owner && tourInput.owner !== 'tutorial') return;
         document.exitPointerLock?.();
         tourInput.owner = 'tutorial';
         tourInput.standX = tourInput.camera.x;
@@ -177,7 +177,7 @@ export function Tutorial({ active, entrancePhase, interaction, cardOpen, touch, 
     card: touch
       ? 'Finding things earns stamps. Tap the counter at the top to see your card.'
       : 'Finding things earns stamps. Press J to see your borrower’s card.',
-    done: 'You’re all set. The rest is yours to explore.',
+    done: 'You’re all set. GO TO, at the top, takes you anywhere in the room.',
   };
 
   const btn =

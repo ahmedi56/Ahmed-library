@@ -7,7 +7,7 @@ import { useDialogFocus } from '../../hooks/useDialogFocus';
 import { projects as projectMeta } from '../../data/projects';
 import { identity } from '../../data/books';
 import { tourInput } from '../../lib/tourInput';
-import { TV_SCREEN_WORLD, TV_VIEW_STAND, TV_VIEW_STAND_NARROW } from '../../lib/tvLayout';
+import { TV_SCREEN_RIGHT, TV_SCREEN_WORLD, TV_VIEW_STAND, TV_VIEW_STAND_NARROW } from '../../lib/tvLayout';
 
 /**
  * The viewing mode: every project object in the room leads here.
@@ -95,9 +95,10 @@ export function ProjectTheatre({ slotId, onNavigate, onClose }: ProjectTheatrePr
     tourInput.standX = stand[0];
     tourInput.standZ = stand[1];
     // Aim so the screen sits clear of the panel: left of it on wide
-    // screens (+z is screen-right from here), above it on narrow ones.
+    // screens (aim past its right edge), above it on narrow ones.
     const [tx, ty, tz] = TV_SCREEN_WORLD;
-    tourInput.lookAt = narrow ? [tx, ty - 1.0, tz] : [tx, ty - 0.1, tz + 0.95];
+    const [rx, , rz] = TV_SCREEN_RIGHT;
+    tourInput.lookAt = narrow ? [tx, ty - 1.0, tz] : [tx + rx * 0.95, ty - 0.1, tz + rz * 0.95];
     const far = Math.hypot(tourInput.camera.x - stand[0], tourInput.camera.z - stand[1]) > WALK_LIMIT;
     if (far) {
       setFading(true);

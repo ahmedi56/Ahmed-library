@@ -211,7 +211,13 @@ function ProjectObjects({
         onHoverAnchor={handleHover}
         onOpenAnchor={openAnchor}
       />
-      <Navigation onOpenBook={onOpenBook} onSkipRoom={onSkipRoom} onStartTutorial={onStartTutorial} onAsk={onAsk} />
+      <Navigation
+        onOpenBook={onOpenBook}
+        onSkipRoom={onSkipRoom}
+        onStartTutorial={onStartTutorial}
+        canTravel={scene.entrancePhase === 'inside'}
+        onAsk={onAsk}
+      />
 
       {/* Hidden while the full panel is up, so the two never stack. */}
       <ProjectPreview

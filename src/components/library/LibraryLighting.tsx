@@ -89,7 +89,8 @@ export function LibraryLighting({ shadows, quality, mix }: LightingProps) {
         shadow-normalBias={0.02}
       />
 
-      <directionalLight ref={fill} position={[4, 1.5, -1]} intensity={0} color={tp.fillColor} />
+      {/* Cool fill from the window side (right wall, lib/roomLayout.ts). */}
+      <directionalLight ref={fill} position={[4, 1.5, 1.15]} intensity={0} color={tp.fillColor} />
 
       <spotLight
         ref={rim}

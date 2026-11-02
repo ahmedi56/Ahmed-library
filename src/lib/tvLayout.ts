@@ -28,7 +28,7 @@ const GAP_ABOVE_MANTEL = 0.12;
 export const TV_CENTER_Y = MANTEL_TOP_Y + GAP_ABOVE_MANTEL + TV_HEIGHT / 2;
 export const TV_WALL_Z = -CASE_DEPTH / 2 - 0.01;
 
-/** The screen's face in world space: the group is rotated −90°, so local +z → world −x. */
+/** The screen's face in world space: the shelf group's local +z, rotated into the world. */
 const faceLocalZ = TV_WALL_Z + TV_BODY_DEPTH / 2;
 export const TV_SCREEN_WORLD: [number, number, number] = [
   SHELF_GROUP_OFFSET_X + faceLocalZ * Math.sin(SHELF_GROUP_ROTATION_Y),
@@ -36,17 +36,24 @@ export const TV_SCREEN_WORLD: [number, number, number] = [
   SHELF_GROUP_OFFSET_Z + faceLocalZ * Math.cos(SHELF_GROUP_ROTATION_Y),
 ];
 
+/** World direction of the screen's own right-hand edge, as seen by a viewer facing it. */
+export const TV_SCREEN_RIGHT: [number, number, number] = [
+  Math.cos(SHELF_GROUP_ROTATION_Y),
+  0,
+  -Math.sin(SHELF_GROUP_ROTATION_Y),
+];
+
 /**
- * Where to stand to watch it: on the open floor between the desk and the
- * back wall, about 3 m back and slightly off-axis — far enough for the
- * whole 2.8 m screen to sit in frame, clear of every collider
- * (lib/collision.ts: desk from z 1.02, shelf from x 3.75).
+ * Where to stand to watch it: on the open floor in front of the back wall,
+ * about 3 m back and on its centre line — far enough for the whole 2.8 m
+ * screen to sit in frame, clear of every collider (lib/collision.ts: desk
+ * from x 1.02, shelf out to z -2.25).
  */
-export const TV_VIEW_STAND: [number, number] = [1.35, 0.45];
+export const TV_VIEW_STAND: [number, number] = [0, 0.3];
 
 /**
  * The same on a narrow (portrait) screen, whose horizontal view is far
  * narrower: from 3 m the 2.8 m screen overflows it. About 4.6 m back, the
- * whole screen fits; the line of sight still passes clear of the desk.
+ * whole screen fits; still clear of the desk (x from 1.02) and the bed.
  */
-export const TV_VIEW_STAND_NARROW: [number, number] = [-0.2, 0.6];
+export const TV_VIEW_STAND_NARROW: [number, number] = [0, 1.9];

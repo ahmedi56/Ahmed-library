@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { timePalette } from '../../lib/timeOfDay';
-import { WINDOW_X, WINDOW_Y, WINDOW_W, WINDOW_H } from '../../lib/roomLayout';
+import { WINDOW_WALL_X, WINDOW_Z, WINDOW_Y, WINDOW_W, WINDOW_H } from '../../lib/roomLayout';
 import {
   getRugTexture,
   getWallGradientTexture,
@@ -33,12 +33,17 @@ interface EnvironmentProps {
   lampOn: boolean;
 }
 
-// Shared between the back-wall cutout and the window itself so the two stay
-// perfectly aligned — the whole opening is defined once, here. Restored to
-// centered now that the bookshelf/mantel has moved back to the right wall
-// (it was briefly shifted off-center to stay clear of a back-wall mantel).
+// Shared between the wall cutout and the window itself so the two stay
+// perfectly aligned — the whole opening is defined once, here.
 const WINDOW_OPEN_HALF_W = WINDOW_W / 2 + 0.03;
 const WINDOW_OPEN_HALF_H = WINDOW_H / 2 + 0.03;
+
+// The right wall, as a frame the window is built in: local x runs along the
+// wall toward the entrance (world +z), local +z points into the room
+// (world -x), y is world height. Same 12 m span as the left wall.
+const RIGHT_WALL_CENTER_Z = 2;
+const RIGHT_WALL_HALF_LENGTH = 6;
+const WINDOW_LOCAL_X = WINDOW_Z - RIGHT_WALL_CENTER_Z;
 
 export function LibraryEnvironment({ quality, lampOn }: EnvironmentProps) {
   const floorMat = useMemo(() => {
@@ -84,9 +89,12 @@ export function LibraryEnvironment({ quality, lampOn }: EnvironmentProps) {
         <primitive object={wallMat} attach="material" />
       </mesh>
 
-      {/* Back wall, with a real rectangular opening left for the window —
-          a solid unbroken plane there would occlude the recessed glass entirely. */}
-      <BackWall wallMat={wallMat} quality={quality} />
+      {/* Back wall: solid now — the bookshelf and TV hang on it, facing the
+          entrance, and the window moved to the right wall. */}
+      <mesh position={[0, 1.5, -3]} receiveShadow>
+        <planeGeometry args={[14, 8]} />
+        <primitive object={wallMat} attach="material" />
+      </mesh>
       <mesh position={[0, -1.98, -2.98]}>
         <boxGeometry args={[14, 0.14, 0.03]} />
         <primitive object={baseboardMat} attach="material" />
@@ -126,28 +134,26 @@ export function LibraryEnvironment({ quality, lampOn }: EnvironmentProps) {
         <primitive object={baseboardMat} attach="material" />
       </mesh>
 
-      {/* Side wall (camera-right), encloses the room behind the window */}
-      <mesh position={[4.5, 1.5, 2]} rotation={[0, -Math.PI / 2, 0]} receiveShadow>
-        <planeGeometry args={[12, 8]} />
-        <primitive object={wallMat} attach="material" />
-      </mesh>
+      {/* Side wall (camera-right), with the window set into it. The window,
+          its certificate frames, its light and its sun shaft are all built
+          in the wall's own frame, so they move as one. */}
+      <group position={[WINDOW_WALL_X, 0, RIGHT_WALL_CENTER_Z]} rotation={[0, -Math.PI / 2, 0]}>
+        <WindowWall wallMat={wallMat} quality={quality} holeX={WINDOW_LOCAL_X} halfLength={RIGHT_WALL_HALF_LENGTH} />
+        <Window quality={quality} x={WINDOW_LOCAL_X} />
+        {/* Exactly two frames flanking the window — left and right only,
+            never above/below it. */}
+        <WindowFrames x={WINDOW_LOCAL_X} />
+      </group>
       <mesh position={[4.48, -1.98, 2]} rotation={[0, -Math.PI / 2, 0]}>
         <boxGeometry args={[12, 0.14, 0.03]} />
         <primitive object={baseboardMat} attach="material" />
       </mesh>
 
-      {/* Window (camera-right), blue-hour glow */}
-      <Window quality={quality} />
-
-      {/* Exactly two frames flanking the (one, unchanged) window — left and
-          right only, never above/below it. */}
-      <WindowFrames />
-
       {/* Bed, against the left wall, clear of the shelf/nook/door */}
       <Bed quality={quality} />
       <Nightstand quality={quality} />
 
-      {/* Fireplace surround dressing the (interactive) bookshelf on the right wall */}
+      {/* Fireplace surround dressing the (interactive) bookshelf on the back wall */}
       <FireplaceMantel />
 
       {/* Wall-mounted TV, centered above the mantel/bookshelf */}
@@ -174,11 +180,15 @@ export function LibraryEnvironment({ quality, lampOn }: EnvironmentProps) {
   );
 }
 
-const BACK_WALL_BOTTOM = -2.5;
-const BACK_WALL_TOP = 5.5;
+const WALL_BOTTOM = -2.5;
+const WALL_TOP = 5.5;
+/** How far the window wall's side strips overlap the strips above and below. */
+const SEAM_OVERLAP = 0.005;
 
 /**
- * Back wall built from 4 strips around a real rectangular hole for the window.
+ * A wall built from 4 strips around a real rectangular hole for the window,
+ * in the wall's own frame (plane at local z = 0, room toward +z): a solid
+ * plane there would occlude the recessed glass entirely.
  *
  * Each strip is its own plane, and a plane's UVs always run 0..1 over its
  * own height — so handing all four the one shared wall material meant each
@@ -195,15 +205,26 @@ const BACK_WALL_TOP = 5.5;
  * then reads as one continuous wall again — and lines up with the side
  * walls, which span exactly the same range.
  */
-function BackWall({ wallMat, quality }: { wallMat: THREE.Material; quality: 'high' | 'medium' | 'low' }) {
-  const wallLeft = -7;
-  const wallRight = 7;
-  const wallBottom = BACK_WALL_BOTTOM;
-  const wallTop = BACK_WALL_TOP;
-  const wallZ = -3;
+function WindowWall({
+  wallMat,
+  quality,
+  holeX,
+  halfLength,
+}: {
+  wallMat: THREE.Material;
+  quality: 'high' | 'medium' | 'low';
+  /** Window centre along the wall, in the wall's frame. */
+  holeX: number;
+  halfLength: number;
+}) {
+  const wallLeft = -halfLength;
+  const wallRight = halfLength;
+  const wallBottom = WALL_BOTTOM;
+  const wallTop = WALL_TOP;
+  const wallZ = 0;
 
-  const holeLeft = WINDOW_X - WINDOW_OPEN_HALF_W;
-  const holeRight = WINDOW_X + WINDOW_OPEN_HALF_W;
+  const holeLeft = holeX - WINDOW_OPEN_HALF_W;
+  const holeRight = holeX + WINDOW_OPEN_HALF_W;
   const holeBottom = WINDOW_Y - WINDOW_OPEN_HALF_H;
   const holeTop = WINDOW_Y + WINDOW_OPEN_HALF_H;
 
@@ -241,14 +262,17 @@ function BackWall({ wallMat, quality }: { wallMat: THREE.Material; quality: 'hig
         <planeGeometry args={[wallRight - wallLeft, holeBottom - wallBottom]} />
         <primitive object={below} attach="material" />
       </mesh>
-      {/* Left of the opening, spanning just its height band */}
+      {/* Left of the opening, spanning just its height band — plus a few
+          millimetres into the strips above and below. Meeting them exactly
+          edge to edge left a hairline gap that flickered through as a
+          dotted line along the wall at sill and lintel height. */}
       <mesh position={[(wallLeft + holeLeft) / 2, WINDOW_Y, wallZ]} receiveShadow>
-        <planeGeometry args={[holeLeft - wallLeft, holeTop - holeBottom]} />
+        <planeGeometry args={[holeLeft - wallLeft, holeTop - holeBottom + SEAM_OVERLAP * 2]} />
         <primitive object={band} attach="material" />
       </mesh>
       {/* Right of the opening, spanning just its height band */}
       <mesh position={[(holeRight + wallRight) / 2, WINDOW_Y, wallZ]} receiveShadow>
-        <planeGeometry args={[wallRight - holeRight, holeTop - holeBottom]} />
+        <planeGeometry args={[wallRight - holeRight, holeTop - holeBottom + SEAM_OVERLAP * 2]} />
         <primitive object={band} attach="material" />
       </mesh>
     </group>
@@ -258,7 +282,7 @@ function BackWall({ wallMat, quality }: { wallMat: THREE.Material; quality: 'hig
 /**
  * Front wall around the entrance doorway (its hole sized to Entrance.tsx's
  * door frame, arched fanlight included) — built from real BoxGeometry, not
- * thin planes. Every other wall in this room (BackWall, the side walls) is
+ * thin planes. Every other wall in this room (the back and side walls) is
  * a plane because they only ever need to be seen from one side; this one
  * doesn't have that luxury — the player spawns on its far side (the porch,
  * z > DOOR_Z) and looks back at the door before ever entering, then walks
@@ -556,11 +580,11 @@ const FRAME_EYE_LEVEL_Y = -0.3;
  * Uses the same PictureFrame component/style as every other frame in the
  * room, backed by the same certificate customization system (slots
  * frame-5/frame-6, distinct from CertificateWall's left-wall frame-1..4).
- * Positions are derived from the window's own constants (WINDOW_X/W/Y) so
+ * Positions are derived from the window's own constants (position, W, Y) so
  * they stay correctly balanced if the window ever moves — the window itself
  * is untouched here.
  */
-function WindowFrames() {
+function WindowFrames({ x }: { x: number }) {
   const { certificates } = useCustomization();
   const left = certificates.find((c) => c.id === 'frame-5');
   const right = certificates.find((c) => c.id === 'frame-6');
@@ -569,10 +593,10 @@ function WindowFrames() {
   const frameHeight = 1.1;
   const gap = 0.4; // breathing room from the window's own edge, each side
   const windowHalfW = WINDOW_W / 2;
-  const z = -2.95; // matches the back wall baseboard's own proud-of-wall offset
+  const z = 0.05; // proud of the wall plane (the wall's frame: room toward +z)
 
-  const leftX = WINDOW_X - windowHalfW - gap - frameWidth / 2;
-  const rightX = WINDOW_X + windowHalfW + gap + frameWidth / 2;
+  const leftX = x - windowHalfW - gap - frameWidth / 2;
+  const rightX = x + windowHalfW + gap + frameWidth / 2;
 
   return (
     <group>
@@ -920,7 +944,8 @@ function WallTV({ quality }: { quality: 'high' | 'medium' | 'low' }) {
   );
 }
 
-function Window({ quality }: { quality: 'high' | 'medium' | 'low' }) {
+/** The window, in its wall's frame (see WindowWall): `x` is its centre along the wall. */
+function Window({ quality, x }: { quality: 'high' | 'medium' | 'low'; x: number }) {
   const w = WINDOW_W;
   const h = WINDOW_H;
 
@@ -942,7 +967,7 @@ function Window({ quality }: { quality: 'high' | 'medium' | 'low' }) {
   const mullionMat = useMemo(() => new THREE.MeshStandardMaterial({ color: '#2e2418', roughness: 0.5 }), []);
 
   // The bug: the glass plane used to sit at local z = 0, and this whole group
-  // is positioned at z = -3 — exactly the back wall's own z. Two large,
+  // sits exactly on its wall's plane (local z = 0). Two large,
   // same-size, same-position faces fighting for the same depth-buffer value
   // is textbook z-fighting, and it's what read as "shaking". Fix: recess the
   // glass into a real reveal behind the wall plane instead of sitting on it.
@@ -954,9 +979,9 @@ function Window({ quality }: { quality: 'high' | 'medium' | 'low' }) {
   const casingZ = 0.03;
 
   return (
-    // Centered above the bookshelf/arch, flush on the back wall — matches the
-    // real hole cut into BackWall exactly, so the recessed glass is actually visible.
-    <group position={[WINDOW_X, WINDOW_Y, -3]}>
+    // Flush on its wall — matches the real hole cut into WindowWall exactly,
+    // so the recessed glass is actually visible.
+    <group position={[x, WINDOW_Y, 0]}>
       {/* Glass, recessed behind the wall plane — subtly glossy so it catches
           specular light instead of glowing flat */}
       <mesh position={[0, 0, glassZ]}>
@@ -1029,8 +1054,8 @@ function Window({ quality }: { quality: 'high' | 'medium' | 'low' }) {
           ~0.2-0.3 units proud of the wall face — enough of a gap, at some
           viewing angles, to still read as disconnected from the glass. This
           version solves position+height together so the *top* edge lands
-          at local (y = 0.6, z = 0), i.e. world z = -3 — exactly the back
-          wall's own plane, inside the window reveal, not floating in front
+          at local (y = 0.6, z = 0) — exactly the wall's own plane,
+          inside the window reveal, not floating in front
           of it — while the *bottom* edge lands at local (y = -2.0, z ≈ 1.59),
           well down toward the floor (floor is at local/world y ≈ -2.70/-2.05)
           and well into the room. Solving both ends at once (rather than

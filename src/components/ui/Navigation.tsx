@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Menu, X, Settings, Rows3, LogIn, LogOut, Gamepad2, MessageCircleQuestion } from 'lucide-react';
 import { SettingsPanel } from './SettingsPanel';
+import { GoToMenu } from './GoToMenu';
 import { useBooks } from '../../hooks/useBooks';
 import { useOwner } from '../../hooks/useOwner';
 import { firebaseConfigured } from '../../lib/firebaseClient';
@@ -26,11 +27,13 @@ interface NavigationProps {
   onSkipRoom: () => void;
   /** Replays the tutorial. */
   onStartTutorial: () => void;
+  /** The visitor is inside the room, so "Go to" can take them places. */
+  canTravel: boolean;
   /** Opens "Ask the librarian". Omitted while the librarian isn't set up. */
   onAsk?: () => void;
 }
 
-export function Navigation({ onOpenBook, onSkipRoom, onStartTutorial, onAsk }: NavigationProps) {
+export function Navigation({ onOpenBook, onSkipRoom, onStartTutorial, canTravel, onAsk }: NavigationProps) {
   const { books } = useBooks();
   const { ready, isOwner, signedIn, signIn, leave, error } = useOwner();
   const [open, setOpen] = useState(false);
@@ -78,6 +81,7 @@ export function Navigation({ onOpenBook, onSkipRoom, onStartTutorial, onAsk }: N
             <span className="hidden sm:inline">TUTORIAL</span>
             <span className="sm:hidden">HELP</span>
           </button>
+          <GoToMenu enabled={canTravel} />
         </div>
 
         <div className="pointer-events-auto flex items-center gap-2">

@@ -10,8 +10,8 @@
  */
 export const tourInput = {
   active: false,
-  /** Who is driving: the tutorial or the project viewing mode. One at a time. */
-  owner: null as 'tutorial' | 'theatre' | null,
+  /** Who is driving: the tutorial, the viewing mode or "Go to". One at a time. */
+  owner: null as 'tutorial' | 'theatre' | 'travel' | null,
   standX: 0,
   standZ: 0,
   /** World point to face. */

@@ -23,12 +23,10 @@ export const ROOM_BOUNDS: AABB = { minX: -4.4, maxX: 4.4, minZ: -2.9, maxZ: 7.5 
 
 // Furniture footprints (x/z only — the walk camera is height-locked to eye level).
 export const FURNITURE_COLLIDERS: AABB[] = [
-  // Bookshelf/fireplace, right wall (x = 4.5) rotated 90°, now centered
-  // along that wall's open run (z = 1.15) — padded past the bare case
-  // footprint to also cover the hearth and surround pilasters flanking it.
-  // X range doesn't reach the desk's (1.02–2.78), so no overlap despite
-  // sharing part of the same Z span.
-  { minX: 3.75, maxX: 4.5, minZ: -0.75, maxZ: 3.05 },
+  // Bookshelf/mantel, centred on the back wall (z = -3) — padded past the
+  // bare case (3.4 m wide, 0.46 deep) to also cover the surround pilasters
+  // flanking it and the mantel shelf's overhang.
+  { minX: -2.0, maxX: 2.0, minZ: -3.0, maxZ: -2.25 },
   { minX: 1.02, maxX: 2.78, minZ: 1.02, maxZ: 2.78 }, // desk (generous box for its rotated footprint)
   { minX: -4.42, maxX: -2.42, minZ: 0.35, maxZ: 1.95 }, // bed, re-centered on the left wall's open run
   { minX: -4.4, maxX: -3.9, minZ: 2.05, maxZ: 2.45 }, // nightstand
