@@ -6,6 +6,8 @@ import { useBooks } from '../../hooks/useBooks';
 import { DOOR_Z } from './Entrance';
 import type { EntrancePhase } from '../../hooks/useEntrance';
 import { PROJECT_ANCHORS } from '../../data/projectAnchors';
+import { pointerAim } from '../../lib/pointerAim';
+import { isTouchDevice } from '../../lib/touchInput';
 
 interface CrosshairInteractionProps {
   entrancePhase: EntrancePhase;
@@ -29,6 +31,11 @@ interface CrosshairInteractionProps {
 
 const BOOK_INTERACT_RADIUS = 0.22;
 const BOOK_MAX_DISTANCE = 2.4;
+// The free mouse cursor reaches further than the crosshair (a visitor can
+// click a book from the middle of the room) but needs a tighter radius:
+// the books are only 0.35 m apart, and the cursor is a precise pointer.
+const POINTER_BOOK_RADIUS = 0.15;
+const POINTER_BOOK_MAX_DISTANCE = 6;
 export const DOOR_INTERACT_POINT = new THREE.Vector3(0, -0.75, DOOR_Z);
 const DOOR_INTERACT_RADIUS = 1.2;
 const DOOR_MAX_DISTANCE = 5;
@@ -78,7 +85,7 @@ export function CrosshairInteraction({
   onOpenAnchor,
   interactRef,
 }: CrosshairInteractionProps) {
-  const { camera } = useThree();
+  const { camera, gl } = useThree();
   const { books } = useBooks();
   const currentTarget = useRef<Target>(null);
   const bookWorldPositions = useRef(new Map<string, THREE.Vector3>());
@@ -128,6 +135,39 @@ export function CrosshairInteraction({
   const closest = useRef(new THREE.Vector3());
   const tmpAnchor = useRef(new THREE.Vector3());
 
+  // Where the free mouse cursor is over the canvas, in normalized device
+  // coordinates, or null while it's elsewhere (over the header, outside the
+  // window) or captured by pointer lock. Touch is left out: there a tap is
+  // also the end of a look-drag, and the crosshair stays the way to aim.
+  const pointerNdc = useRef<THREE.Vector2 | null>(null);
+  const raycaster = useRef(new THREE.Raycaster());
+  const pointerDir = useRef(new THREE.Vector3());
+  useEffect(() => {
+    const el = gl.domElement;
+    if (isTouchDevice()) return;
+    const onMove = (e: PointerEvent) => {
+      if (e.pointerType === 'touch' || document.pointerLockElement === el) {
+        pointerNdc.current = null;
+        return;
+      }
+      const rect = el.getBoundingClientRect();
+      const ndc = pointerNdc.current ?? new THREE.Vector2();
+      ndc.set(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1);
+      pointerNdc.current = ndc;
+    };
+    const onLeave = () => {
+      pointerNdc.current = null;
+    };
+    el.addEventListener('pointermove', onMove);
+    el.addEventListener('pointerleave', onLeave);
+    return () => {
+      el.removeEventListener('pointermove', onMove);
+      el.removeEventListener('pointerleave', onLeave);
+      el.style.cursor = '';
+      pointerAim.book = null;
+    };
+  }, [gl]);
+
   useFrame(() => {
     camera.getWorldDirection(forward.current);
     const origin = camera.position;
@@ -135,7 +175,36 @@ export function CrosshairInteraction({
     let best: Target = null;
     let bestDist = Infinity;
 
-    if (entrancePhase === 'inside' || entrancePhase === 'walking') {
+    // A book under the free mouse cursor wins over whatever the crosshair
+    // is on: the visitor is pointing at it. Books only — everything else
+    // (door, PC, lamp, TV) keeps the crosshair, so E still does what the
+    // aim prompts say.
+    let pointerBook: string | null = null;
+    const ndc = document.pointerLockElement === gl.domElement ? null : pointerNdc.current;
+    if (ndc && (entrancePhase === 'inside' || entrancePhase === 'walking')) {
+      raycaster.current.setFromCamera(ndc, camera);
+      pointerDir.current.copy(raycaster.current.ray.direction);
+      let pointerBest = Infinity;
+      for (const [id, point] of bookWorldPositions.current) {
+        toPoint.current.copy(point).sub(origin);
+        const t = toPoint.current.dot(pointerDir.current);
+        if (t <= 0 || t > POINTER_BOOK_MAX_DISTANCE) continue;
+        closest.current.copy(origin).addScaledVector(pointerDir.current, t);
+        const dist = closest.current.distanceTo(point);
+        if (dist < POINTER_BOOK_RADIUS && dist < pointerBest) {
+          pointerBest = dist;
+          pointerBook = id;
+        }
+      }
+    }
+    if (pointerAim.book !== pointerBook) {
+      pointerAim.book = pointerBook;
+      gl.domElement.style.cursor = pointerBook ? 'pointer' : '';
+    }
+
+    if (pointerBook) {
+      best = { kind: 'book', id: pointerBook };
+    } else if (entrancePhase === 'inside' || entrancePhase === 'walking') {
       for (const [id, point] of bookWorldPositions.current) {
         toPoint.current.copy(point).sub(origin);
         const t = toPoint.current.dot(forward.current);

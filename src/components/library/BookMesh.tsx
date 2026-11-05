@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Text } from '@react-three/drei';
 import * as THREE from 'three';
 import type { BookData } from '../../data/books';
@@ -18,10 +18,12 @@ interface BookMeshProps {
   data: BookData;
   quality?: 'high' | 'medium' | 'low';
   showLabel?: boolean;
+  /** Aimed at: the cover warms up so the book reads as the one to click. */
+  glow?: boolean;
 }
 
 /** The closed book: used on the shelf, and while it's being grabbed/carried. */
-export function BookMesh({ data, quality = 'high', showLabel = true }: BookMeshProps) {
+export function BookMesh({ data, quality = 'high', showLabel = true, glow = false }: BookMeshProps) {
   const width = BOOK_WIDTH * data.thickness;
   const height = BOOK_HEIGHT * data.height;
   const depth = BOOK_DEPTH;
@@ -62,6 +64,11 @@ export function BookMesh({ data, quality = 'high', showLabel = true }: BookMeshP
       }),
     [data.coverColor, grain, bump]
   );
+
+  useEffect(() => {
+    coverMat.emissive.set(data.accentColor);
+    coverMat.emissiveIntensity = glow ? 0.22 : 0;
+  }, [coverMat, data.accentColor, glow]);
 
   const bandMat = useMemo(
     () => new THREE.MeshStandardMaterial({ color: data.accentColor, metalness: 0.45, roughness: 0.35 }),

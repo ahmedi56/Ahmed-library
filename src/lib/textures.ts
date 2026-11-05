@@ -446,3 +446,38 @@ export function getPhoneFinanceTexture() {
   cache.set(key, texture);
   return texture;
 }
+
+/**
+ * Emissive map for the bookcase's back: each compartment brightest just
+ * under its light strip, falling off toward its shelf board. `split` is the
+ * height of the middle board as a fraction of the back, from the bottom.
+ */
+export function getNicheGlowTexture(split = 0.45) {
+  const key = `nicheGlow:${split}`;
+  const cached = cache.get(key);
+  if (cached) return cached;
+
+  const w = 4;
+  const h = 256;
+  const canvas = createCanvas(h);
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d')!;
+  // Canvas y runs top-down; the texture's v runs bottom-up.
+  const boardY = Math.round(h * (1 - split));
+  const band = (top: number, bottom: number) => {
+    const g = ctx.createLinearGradient(0, top, 0, bottom);
+    g.addColorStop(0, '#ffffff');
+    g.addColorStop(0.35, '#a6a6a6');
+    g.addColorStop(1, '#4d4d4d');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, top, w, bottom - top);
+  };
+  band(0, boardY);
+  band(boardY, h);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  cache.set(key, texture);
+  return texture;
+}

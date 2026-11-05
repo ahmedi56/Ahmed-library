@@ -1,8 +1,8 @@
-import { useMemo } from 'react';
+import { useLayoutEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { Book } from './Book';
 import { useBooks } from '../../hooks/useBooks';
-import { getWoodTexture } from '../../lib/textures';
+import { getNicheGlowTexture, getWoodTexture } from '../../lib/textures';
 import {
   computeBookLayout,
   SHELF_BOTTOM,
@@ -13,8 +13,13 @@ import {
   SHELF_GROUP_OFFSET_X,
   SHELF_GROUP_OFFSET_Z,
   SHELF_GROUP_ROTATION_Y,
+  SHELF_SURFACE_Y,
+  UPPER_SHELF_Y,
+  UPPER_SURFACE_Y,
+  computeShelfDecor,
 } from '../../lib/bookLayout';
 import type { BookState } from '../../hooks/useBookInteraction';
+import type { FillerSlot } from '../../lib/bookLayout';
 
 interface BookshelfProps {
   stateFor: (id: string) => BookState;
@@ -28,8 +33,14 @@ export function Bookshelf({ stateFor, reduced, quality = 'high' }: BookshelfProp
   const frameMat = useMemo(
     () =>
       new THREE.MeshStandardMaterial({
-        color: '#2c2114',
-        map: quality === 'low' ? null : getWoodTexture('shelf', { base: '#2c2114', grain: '#150f09', repeat: [3, 1] }),
+        // Walnut, not near-black: the near-black frame read as a dark hole
+        // in the wall around the lit back.
+        color: quality === 'low' ? '#5a3d24' : '#ffffff',
+        map: quality === 'low' ? null : getWoodTexture('shelfWalnut', { base: '#5a3d24', grain: '#3b2716', repeat: [3, 1] }),
+        // A touch of self-light so the inner faces of the posts, which the
+        // mantel keeps in shadow, read as wood rather than black.
+        emissive: '#2a1a0d',
+        emissiveIntensity: 0.6,
         roughness: 0.55,
         metalness: 0.12,
       }),
@@ -48,10 +59,20 @@ export function Bookshelf({ stateFor, reduced, quality = 'high' }: BookshelfProp
         // The first pass (tan #8a6a48 + strong orange emissive) overshot: the
         // whole back glowed flat orange like a lit display box. A mid walnut
         // with a faint glow still separates the spines without the glare.
-        color: quality === 'low' ? '#76593c' : '#ffffff',
-        map: quality === 'low' ? null : getWoodTexture('shelfBack3', { base: '#76593c', grain: '#5a4129', repeat: [3, 2] }),
-        emissive: '#3d2a17',
-        emissiveIntensity: 0.45,
+        // Light oak, the "warm lit niche" look: the section books are dark
+        // cloth with gold lettering, so they read as silhouettes against it.
+        // The mid-walnut back before this still sank into shadow and the
+        // shelf looked like a dark box with eight specks in it. The glow
+        // comes from the light strip under the top board, not from the
+        // back itself (a glowing back looked like a flat orange display box).
+        color: quality === 'low' ? '#c49a6c' : '#ffffff',
+        map: quality === 'low' ? null : getWoodTexture('shelfOak', { base: '#c49a6c', grain: '#a57c4f', repeat: [3, 2] }),
+        // Lit from the strip above: brightest under the top board, fading
+        // toward the bottom row. A gradient emissive map fakes that falloff
+        // for free; a real light in the niche would cost a light per pixel.
+        emissive: '#e0b07a',
+        emissiveMap: getNicheGlowTexture((UPPER_SHELF_Y - SHELF_BOTTOM) / CASE_HEIGHT),
+        emissiveIntensity: 0.55,
         roughness: 0.8,
       }),
     [quality]
@@ -61,6 +82,15 @@ export function Bookshelf({ stateFor, reduced, quality = 'high' }: BookshelfProp
     () => new THREE.MeshStandardMaterial({ color: '#c9a05c', metalness: 0.85, roughness: 0.22 }),
     []
   );
+
+  // Warm strip light under the top board. Emissive, not a real light: it
+  // costs nothing, and the fill comes from the oak back being light.
+  const stripMat = useMemo(
+    () => new THREE.MeshBasicMaterial({ color: '#ffe0a6', toneMapped: false }),
+    []
+  );
+
+  const decor = useMemo(() => computeShelfDecor(bookLayout), [bookLayout]);
 
   const caseCenterY = SHELF_BOTTOM + CASE_HEIGHT / 2;
   const postX = CASE_WIDTH / 2 - 0.03;
@@ -89,6 +119,22 @@ export function Bookshelf({ stateFor, reduced, quality = 'high' }: BookshelfProp
         <boxGeometry args={[CASE_WIDTH - 0.1, 0.012, 0.012]} />
       </mesh>
 
+      <mesh position={[0, caseTopY - SHELF_BOARD_THICKNESS / 2 - 0.008, CASE_DEPTH / 2 - 0.05]} material={stripMat}>
+        <boxGeometry args={[CASE_WIDTH - 0.16, 0.012, 0.02]} />
+      </mesh>
+
+      <mesh position={[0, UPPER_SHELF_Y, 0]} receiveShadow castShadow material={frameMat}>
+        <boxGeometry args={[CASE_WIDTH - 0.12, SHELF_BOARD_THICKNESS, CASE_DEPTH - 0.03]} />
+      </mesh>
+      {/* A second strip under the middle board, for the section books' row. */}
+      <mesh position={[0, UPPER_SHELF_Y - SHELF_BOARD_THICKNESS / 2 - 0.008, CASE_DEPTH / 2 - 0.06]} material={stripMat}>
+        <boxGeometry args={[CASE_WIDTH - 0.2, 0.012, 0.02]} />
+      </mesh>
+
+      <FillerBooks slots={decor.fillers} />
+      <ShelfPlant position={decor.plantX} />
+      <Bookend x={decor.bookendX} material={brassMat} />
+
       {bookLayout.map(({ id, position, rotationY }) => {
         const book = books.find((b) => b.id === id);
         if (!book) return null;
@@ -108,3 +154,95 @@ export function Bookshelf({ stateFor, reduced, quality = 'high' }: BookshelfProp
   );
 }
 
+
+const FILLER_COLORS = ['#d9c9a8', '#a8b59a', '#c98f6b', '#8fa3b0', '#e4d8bf', '#b9a07a', '#9c7b6a'];
+
+/**
+ * The shelf's quiet extras: plain books in pale linen and clay tones that
+ * fill the gaps between the eight section books, so the shelf looks lived in
+ * rather than sparse. Pale against dark, and no lettering, so the section
+ * books still stand out as the ones to pick. One instanced mesh: a single
+ * draw call however many there are. Not interactive — the crosshair and the
+ * cursor only test the section books' slots.
+ */
+function FillerBooks({ slots }: { slots: FillerSlot[] }) {
+  const mesh = useRef<THREE.InstancedMesh>(null);
+  // No cover-grain map: it darkens whatever it multiplies, and these are
+  // meant to stay pale so the dark section books stand out among them.
+  const material = useMemo(() => new THREE.MeshStandardMaterial({ roughness: 0.75 }), []);
+
+  useLayoutEffect(() => {
+    const m = mesh.current;
+    if (!m) return;
+    const matrix = new THREE.Matrix4();
+    const rotation = new THREE.Quaternion();
+    const color = new THREE.Color();
+    slots.forEach((slot, i) => {
+      rotation.setFromEuler(new THREE.Euler(0, 0, slot.lean));
+      matrix.compose(
+        new THREE.Vector3(slot.x, slot.y, slot.z),
+        rotation,
+        new THREE.Vector3(slot.width, slot.height, slot.depth)
+      );
+      m.setMatrixAt(i, matrix);
+      m.setColorAt(i, color.set(FILLER_COLORS[slot.colorIndex % FILLER_COLORS.length]));
+    });
+    m.instanceMatrix.needsUpdate = true;
+    if (m.instanceColor) m.instanceColor.needsUpdate = true;
+  }, [slots]);
+
+  return (
+    <instancedMesh
+      // Keyed on the count: an instanced mesh's capacity is fixed at creation.
+      key={slots.length}
+      ref={mesh}
+      args={[undefined, undefined, slots.length]}
+      material={material}
+      castShadow
+      receiveShadow
+    >
+      <boxGeometry args={[1, 1, 1]} />
+    </instancedMesh>
+  );
+}
+
+/** A small potted plant on the upper shelf. */
+function ShelfPlant({ position }: { position: number }) {
+  const potH = 0.11;
+  return (
+    <group position={[position, UPPER_SURFACE_Y, 0.02]}>
+      <mesh position={[0, potH / 2, 0]} castShadow>
+        <cylinderGeometry args={[0.065, 0.05, potH, 18]} />
+        <meshStandardMaterial color="#b8714b" roughness={0.85} />
+      </mesh>
+      {PLANT_LEAVES.map(([x, y, z, r], i) => (
+        <mesh key={i} position={[x, potH + y, z]} castShadow>
+          <sphereGeometry args={[r, 10, 8]} />
+          <meshStandardMaterial color={i % 2 ? '#5f7d4a' : '#4d6b3c'} roughness={0.7} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
+const PLANT_LEAVES: [number, number, number, number][] = [
+  [0, 0.05, 0, 0.06],
+  [-0.045, 0.08, 0.01, 0.045],
+  [0.05, 0.09, -0.01, 0.045],
+  [0.01, 0.13, 0.02, 0.04],
+  [-0.02, 0.04, 0.04, 0.04],
+];
+
+/** A brass L-bookend propping up the row's first stack. */
+function Bookend({ x, material }: { x: number; material: THREE.Material }) {
+  return (
+    <group position={[x, SHELF_SURFACE_Y, 0]}>
+      <mesh position={[0, 0.09, 0]} material={material} castShadow>
+        <boxGeometry args={[0.008, 0.18, 0.12]} />
+      </mesh>
+      <mesh position={[0.04, 0.004, 0]} material={material}>
+        <boxGeometry args={[0.08, 0.008, 0.12]} />
+      </mesh>
+    </group>
+  );
+}

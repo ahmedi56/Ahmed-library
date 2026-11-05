@@ -29,7 +29,7 @@ export function Book({ data, position, rotationY, state, reduced, quality = 'hig
   const group = useRef<THREE.Group>(null);
   const isActive = ACTIVE_STATES.includes(state);
 
-  const targetPullOut = state === 'hovered' ? 0.045 : 0;
+  const targetPullOut = state === 'hovered' ? 0.06 : 0;
   const targetTilt = state === 'hovered' && !reduced ? -0.1 : 0;
 
   useFrame((_, delta) => {
@@ -48,7 +48,7 @@ export function Book({ data, position, rotationY, state, reduced, quality = 'hig
 
   return (
     <group ref={group} position={position}>
-      <BookMesh data={data} quality={quality} />
+      <BookMesh data={data} quality={quality} glow={state === 'hovered'} />
     </group>
   );
 }

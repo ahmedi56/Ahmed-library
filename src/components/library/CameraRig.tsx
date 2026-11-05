@@ -7,6 +7,7 @@ import { collidersFor, resolveMove, PLAYER_EYE_HEIGHT, FLOOR_Y } from '../../lib
 import { playFootstep, unlockFootstepAudio } from '../../lib/footsteps';
 import { touchInput, isTouchDevice } from '../../lib/touchInput';
 import { tourInput } from '../../lib/tourInput';
+import { pointerAim } from '../../lib/pointerAim';
 
 interface CameraRigProps {
   entrancePhase: EntrancePhase;
@@ -117,6 +118,13 @@ export function CameraRig({ entrancePhase, doorOpen, reduced, onCrossThreshold, 
       unlockFootstepAudio();
       if (touchDragged.current) {
         touchDragged.current = false;
+        return;
+      }
+      // A free cursor over a book: open it now. Capturing the pointer
+      // first would make every visitor click twice, and leave the ones
+      // who don't know about pointer lock clicking a book that ignores them.
+      if (!locked.current && pointerAim.book) {
+        interactRef.current?.();
         return;
       }
       if (pointerLockSupported.current && !locked.current) {
