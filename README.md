@@ -46,7 +46,7 @@ Instead of a page to scroll, visitors step through an arched doorway into a smal
 |---|---|
 | UI | React 19, TypeScript, Tailwind CSS v4, lucide-react |
 | 3D | Three.js via React Three Fiber and drei, GSAP animations |
-| Data | Firebase (Firestore and Google Auth) for the owner-editable room |
+| Data | Firebase (Firestore and Google Auth) for the owner-editable room. Visitors read it over Firestore's REST API; only the owner loads the SDK |
 | Server | Two Vercel serverless functions: `/api/search` and `/api/librarian` |
 | Quality | oxlint, Playwright smoke tests |
 
@@ -129,7 +129,7 @@ The Settings panel writes shared documents, so lock them down before sharing the
 
 ### Notes
 
-- **Link previews:** the URLs in `index.html` point to `ahmedjatlaoui.vercel.app`. Add a 1200×630 `public/og-image.jpg` (see `public/og-image-README.txt`).
+- **Link previews:** the URLs in `index.html` point to `ahmedjatlaoui.vercel.app`, and `public/og-image.jpg` (1200×630) is the picture shown when the link is shared. To replace it, see `public/og-image-README.txt`.
 - **Assets:** the whole scene is generated at runtime (canvas textures, procedural geometry), so there are no model or texture files to ship.
 - **Fonts:** loaded from Google Fonts and jsDelivr. Self-host them if you add a strict Content Security Policy.
 

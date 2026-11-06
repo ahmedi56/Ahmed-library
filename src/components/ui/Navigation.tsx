@@ -4,7 +4,7 @@ import { SettingsPanel } from './SettingsPanel';
 import { GoToMenu } from './GoToMenu';
 import { useBooks } from '../../hooks/useBooks';
 import { useOwner } from '../../hooks/useOwner';
-import { firebaseConfigured } from '../../lib/firebaseClient';
+import { firebaseConfigured } from '../../lib/firebaseConfig';
 import { useCloseOnEscape } from '../../hooks/useCloseOnEscape';
 import { useDialogFocus } from '../../hooks/useDialogFocus';
 

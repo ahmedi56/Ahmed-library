@@ -1,41 +1,62 @@
-import { initializeApp, type FirebaseApp } from 'firebase/app';
-import { getFirestore, type Firestore } from 'firebase/firestore';
-import { getAuth, type Auth } from 'firebase/auth';
-
-// Like Supabase's anon key, this config is meant to be public — it's what
-// every Firebase web app ships in its bundle. Access is controlled by
-// Firestore Security Rules on the project itself, not by keeping this
-// secret, which is why it reads VITE_-prefixed vars (bundled into the
-// client) unlike the search API key, a real secret that stays server-side.
-const apiKey = import.meta.env.VITE_FIREBASE_API_KEY as string | undefined;
-const authDomain = import.meta.env.VITE_FIREBASE_AUTH_DOMAIN as string | undefined;
-const projectId = import.meta.env.VITE_FIREBASE_PROJECT_ID as string | undefined;
-const storageBucket = import.meta.env.VITE_FIREBASE_STORAGE_BUCKET as string | undefined;
-const messagingSenderId = import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID as string | undefined;
-const appId = import.meta.env.VITE_FIREBASE_APP_ID as string | undefined;
-
-export const firebaseConfigured = Boolean(apiKey && projectId && appId);
-
-const app: FirebaseApp | null = firebaseConfigured
-  ? initializeApp({ apiKey, authDomain, projectId, storageBucket, messagingSenderId, appId })
-  : null;
-
-export const db: Firestore | null = app ? getFirestore(app) : null;
-export const auth: Auth | null = app ? getAuth(app) : null;
+import { initializeApp } from 'firebase/app';
+import { deleteDoc, doc, getFirestore, setDoc } from 'firebase/firestore';
+import {
+  getAuth,
+  GoogleAuthProvider,
+  onAuthStateChanged,
+  signInWithPopup,
+  signOut,
+  type User,
+} from 'firebase/auth';
+import { firebaseConfigured, firebaseEnv, ownerUid } from './firebaseConfig';
 
 /**
- * The one account allowed to edit the room.
+ * The Firebase SDK: the owner's sign-in and the room's writes.
  *
- * Empty by default, and an empty value means *nobody* is the owner — a
- * missing config locks editing down rather than opening it up. Publishing
- * this uid is harmless: it identifies who may write, it doesn't
- * authenticate them. The actual enforcement lives in firestore.rules;
- * everything on this side is only there so the UI doesn't offer people
- * buttons that would fail.
+ * Never import this statically. It is loaded on demand through
+ * lib/firebaseLazy.ts, only for the owner (see adminWanted), so the
+ * ~157 kB SDK stays out of every visitor's download. Visitors read the
+ * room's saved contents over REST instead (lib/firestoreRest.ts).
  */
-export const ownerUid = ((import.meta.env.VITE_OWNER_UID as string | undefined) ?? '').trim();
+const app = firebaseConfigured ? initializeApp(firebaseEnv) : null;
+const db = app ? getFirestore(app) : null;
+const auth = app ? getAuth(app) : null;
 
 /** True only for a signed-in user whose uid matches VITE_OWNER_UID. */
 export function isOwnerNow(): boolean {
   return Boolean(ownerUid && auth?.currentUser && auth.currentUser.uid === ownerUid);
+}
+
+/** Calls back with the signed-in user (or null) now and on every change. */
+export function watchAuth(callback: (user: User | null) => void): () => void {
+  if (!auth) {
+    callback(null);
+    return () => {};
+  }
+  return onAuthStateChanged(auth, callback);
+}
+
+export function currentUser(): User | null {
+  return auth?.currentUser ?? null;
+}
+
+export async function signInWithGoogle(): Promise<void> {
+  if (!auth) return;
+  await signInWithPopup(auth, new GoogleAuthProvider());
+}
+
+export async function signOutUser(): Promise<void> {
+  if (!auth) return;
+  await signOut(auth);
+}
+
+/** Replaces the document at `collection/id`. Owner only (firestore.rules). */
+export async function writeDocument(collection: string, id: string, data: Record<string, unknown>): Promise<void> {
+  if (!db) throw new Error('Firebase is not configured.');
+  await setDoc(doc(db, collection, id), data);
+}
+
+export async function removeDocument(collection: string, id: string): Promise<void> {
+  if (!db) throw new Error('Firebase is not configured.');
+  await deleteDoc(doc(db, collection, id));
 }

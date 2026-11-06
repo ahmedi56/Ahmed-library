@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { collection, deleteDoc, doc, getDoc, getDocs, setDoc, writeBatch } from 'firebase/firestore';
-import { db, isOwnerNow } from '../lib/firebaseClient';
+import { firebaseConfigured } from '../lib/firebaseConfig';
+import { loadedFirebase } from '../lib/firebaseLazy';
+import { getDocument, listCollection } from '../lib/firestoreRest';
 import { projectVideos } from '../data/projectVideos';
 import { fetchResumeMeta, invalidateResumeMeta } from '../lib/storedResume';
 
@@ -99,12 +100,12 @@ const CustomizationContext = createContext<CustomizationApi | null>(null);
  * Feb 2026) — simpler to wire up, and well within Firestore's 1MiB/doc cap
  * for the resized sizes fileToDataUrl produces.
  *
- * First connect to an empty `certificates` collection / missing profile doc
- * seeds the defaults below, same self-seeding approach as useBooks.tsx.
+ * A missing document shows its default below; the owner's first save of
+ * it from Settings creates it.
  */
 export function CustomizationProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<CustomizationState>(DEFAULT_STATE);
-  const [loading, setLoading] = useState(Boolean(db));
+  const [loading, setLoading] = useState(firebaseConfigured);
   // See the matching comment in useBooks.tsx: guards against StrictMode's
   // dev-only double-invoke re-issuing this fetch/seed a second time.
   const fetchStarted = useRef(false);
@@ -117,93 +118,52 @@ export function CustomizationProvider({ children }: { children: ReactNode }) {
     // *first* (and only) run is also the one StrictMode's synthetic cleanup
     // marks cancelled, so a `cancelled` check here would discard every
     // fetch's result before it ever reached state.
-    if (!db || fetchStarted.current) return;
+    if (!firebaseConfigured || fetchStarted.current) return;
     fetchStarted.current = true;
-    const firestore = db;
 
+    // Read over REST, not the SDK: see lib/firestoreRest.ts. This used to
+    // also seed default documents into an empty database on the owner's
+    // first visit; that's gone with the SDK. A missing document already
+    // shows its default below, and the first save from Settings creates it.
     (async () => {
       try {
-        let certsSnap = await getDocs(collection(firestore, 'certificates'));
-        // Seeds any DEFAULT_STATE slot missing from the DB, not just when
-        // the whole collection is empty — so a database seeded before
-        // frame-5/6 existed still picks them up here instead of staying
-        // permanently short two slots.
-        //
-        // Owner-only, and in its own try/catch. Seeding is a write, and
-        // writes are now denied to everyone else; letting a rejected seed
-        // throw out of the surrounding block would abandon the *read*
-        // too, leaving every visitor looking at empty frames.
-        const existingIds = new Set(certsSnap.docs.map((d) => d.id));
-        const missing = DEFAULT_STATE.certificates.filter((c) => !existingIds.has(c.id));
-        if (missing.length > 0 && isOwnerNow()) {
-          try {
-            const batch = writeBatch(firestore);
-            missing.forEach((c) => {
-              batch.set(doc(firestore, 'certificates', c.id), { title: c.title, image: c.image });
-            });
-            await batch.commit();
-            certsSnap = await getDocs(collection(firestore, 'certificates'));
-          } catch (err) {
-            console.warn('CustomizationProvider: could not seed certificates', err);
-          }
-        }
+        const certDocs = await listCollection('certificates');
         const certificates = DEFAULT_STATE.certificates.map((fallback) => {
-          const found = certsSnap.docs.find((d) => d.id === fallback.id);
-          if (!found) return fallback;
-          const data = found.data();
-          return { id: fallback.id, title: data.title ?? fallback.title, image: data.image ?? null };
+          const data = certDocs.get(fallback.id);
+          if (!data) return fallback;
+          return {
+            id: fallback.id,
+            title: (data.title as string | undefined) ?? fallback.title,
+            image: (data.image as string | null | undefined) ?? null,
+          };
         });
 
-        // Wall TV slots, same read-merge-seed shape as the certificates.
+        // Wall TV slots, same read-and-merge shape as the certificates.
         let projects = DEFAULT_STATE.projects;
         try {
-          let projSnap = await getDocs(collection(firestore, 'projects'));
-          const haveIds = new Set(projSnap.docs.map((d) => d.id));
-          const missingProjects = DEFAULT_STATE.projects.filter((p) => !haveIds.has(p.id));
-          if (missingProjects.length > 0 && isOwnerNow()) {
-            const batch = writeBatch(firestore);
-            missingProjects.forEach((p) => {
-              const { id, ...fields } = p;
-              batch.set(doc(firestore, 'projects', id), fields);
-            });
-            await batch.commit();
-            projSnap = await getDocs(collection(firestore, 'projects'));
-          }
+          const projDocs = await listCollection('projects');
           projects = DEFAULT_STATE.projects.map((fallback) => {
-            const found = projSnap.docs.find((d) => d.id === fallback.id);
-            if (!found) return fallback;
-            const data = found.data();
+            const data = projDocs.get(fallback.id);
+            if (!data) return fallback;
             return {
               id: fallback.id,
-              title: data.title ?? fallback.title,
-              stack: data.stack ?? fallback.stack,
-              description: data.description ?? fallback.description,
-              src: data.src ?? fallback.src,
+              title: (data.title as string | undefined) ?? fallback.title,
+              stack: (data.stack as string | undefined) ?? fallback.stack,
+              description: (data.description as string | undefined) ?? fallback.description,
+              src: (data.src as string | undefined) ?? fallback.src,
             };
           });
         } catch (err) {
           console.warn('CustomizationProvider: could not load projects', err);
         }
 
-        // Metadata only, over REST — `getDoc` would pull the whole base64
-        // PDF (up to ~930 kB) into the room's load just to render a
-        // filename and a size in the Settings panel. See lib/storedResume.
+        // Metadata only — the whole base64 PDF (up to ~930 kB) would be
+        // pulled into the room's load just to render a filename and a size
+        // in the Settings panel. See lib/storedResume.
         const resume = await fetchResumeMeta();
 
-        const profileRef = doc(firestore, 'profile', PROFILE_DOC_ID);
-        const profileSnap = await getDoc(profileRef);
-        let photo: string | null = null;
-        if (!profileSnap.exists()) {
-          if (isOwnerNow()) {
-            try {
-              await setDoc(profileRef, { photo: null });
-            } catch (err) {
-              console.warn('CustomizationProvider: could not seed profile', err);
-            }
-          }
-        } else {
-          photo = (profileSnap.data().photo as string | null) ?? null;
-        }
+        const profile = await getDocument('profile', PROFILE_DOC_ID);
+        const photo = (profile?.photo as string | null | undefined) ?? null;
 
         setState({ certificates, photo, projects, resume });
       } catch (err) {
@@ -227,7 +187,8 @@ export function CustomizationProvider({ children }: { children: ReactNode }) {
 
   const writeDoc = useCallback(async (key: DocKey) => {
     pendingSaves.current.delete(key);
-    if (!db || !isOwnerNow()) return;
+    const firebase = loadedFirebase();
+    if (!firebase?.isOwnerNow()) return;
 
     const [coll, id] = key.split('/');
     const s = stateRef.current;
@@ -247,7 +208,7 @@ export function CustomizationProvider({ children }: { children: ReactNode }) {
     if (!data) return;
 
     try {
-      await setDoc(doc(db, coll, id), data);
+      await firebase.writeDocument(coll, id, data);
       // Only clears an error about this same document — a later save of a
       // different one says nothing about whether the failed one landed.
       setSaveError((e) => (e?.key === key ? null : e));
@@ -265,7 +226,8 @@ export function CustomizationProvider({ children }: { children: ReactNode }) {
 
   const scheduleSave = useCallback(
     (key: DocKey) => {
-      if (!db || !isOwnerNow()) return;
+      // Only the signed-in owner's visit has loaded the SDK (useOwner).
+      if (!loadedFirebase()?.isOwnerNow()) return;
       const timers = pendingSaves.current;
       clearTimeout(timers.get(key));
       timers.set(key, setTimeout(() => void writeDoc(key), SAVE_DEBOUNCE_MS));
@@ -317,11 +279,11 @@ export function CustomizationProvider({ children }: { children: ReactNode }) {
       // would otherwise look saved until the next reload, which is exactly
       // when it matters most that it wasn't.
       setResume: async (file) => {
-        if (!db || !isOwnerNow()) throw new Error('Not signed in as the owner.');
-        const ref = doc(db, 'profile', RESUME_DOC_ID);
+        const firebase = loadedFirebase();
+        if (!firebase?.isOwnerNow()) throw new Error('Not signed in as the owner.');
 
         if (!file) {
-          await deleteDoc(ref);
+          await firebase.removeDocument('profile', RESUME_DOC_ID);
           // Otherwise the cached metadata would keep the download button
           // offering a CV that is no longer there.
           invalidateResumeMeta();
@@ -329,7 +291,7 @@ export function CustomizationProvider({ children }: { children: ReactNode }) {
           return;
         }
 
-        await setDoc(ref, {
+        await firebase.writeDocument('profile', RESUME_DOC_ID, {
           dataUrl: file.dataUrl,
           filename: file.filename,
           size: file.size,

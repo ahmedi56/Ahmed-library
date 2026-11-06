@@ -10,6 +10,6 @@ Easiest way to make one:
   2. Take a screenshot.
   3. Crop it to 1200 x 630 and save it here as og-image.jpg.
 
-Then open index.html and replace https://example.com with your real
-domain in the canonical / og:url / og:image / twitter:image tags — those
-must be absolute URLs or the preview is ignored.
+If the site moves to its own domain, open index.html and replace
+https://ahmedjatlaoui.vercel.app in the canonical / og:url / og:image /
+twitter:image tags. Those must be absolute URLs or the preview is ignored.

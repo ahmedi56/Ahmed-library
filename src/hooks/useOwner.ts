@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth';
-import { auth, ownerUid } from '../lib/firebaseClient';
+import { adminWanted, ownerUid, rememberAdmin } from '../lib/firebaseConfig';
+import { loadFirebase } from '../lib/firebaseLazy';
 
 interface OwnerApi {
   /** Auth has reported in; until then, show nothing owner-related. */
@@ -25,26 +25,45 @@ interface OwnerApi {
  * decides what the interface offers.
  */
 export function useOwner(): OwnerApi {
-  const [ready, setReady] = useState(!auth);
+  // Only the owner's visits load the Firebase SDK (see adminWanted); for
+  // everyone else this is settled at once: nobody signed in.
+  const [admin] = useState(adminWanted);
+  const [ready, setReady] = useState(!admin);
   const [uid, setUid] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!auth) return;
-    return onAuthStateChanged(auth, (user) => {
-      setUid(user?.uid ?? null);
-      setReady(true);
-      // A sign-in that ultimately worked must not leave a failure message
-      // on screen, whatever the popup did on its way there.
-      if (user) setError(null);
-    });
-  }, []);
+    if (!admin) return;
+    let unsubscribe: (() => void) | null = null;
+    let cancelled = false;
+    loadFirebase()
+      .then((firebase) => {
+        if (cancelled) return;
+        unsubscribe = firebase.watchAuth((user) => {
+          setUid(user?.uid ?? null);
+          setReady(true);
+          // A sign-in that ultimately worked must not leave a failure message
+          // on screen, whatever the popup did on its way there.
+          if (user) setError(null);
+          // So this browser keeps getting the SETTINGS button without
+          // ?admin=1 next time.
+          if (user && ownerUid && user.uid === ownerUid) rememberAdmin(true);
+        });
+      })
+      .catch(() => {
+        if (!cancelled) setReady(true);
+      });
+    return () => {
+      cancelled = true;
+      unsubscribe?.();
+    };
+  }, [admin]);
 
   const signIn = useCallback(async () => {
-    if (!auth) return;
+    const firebase = await loadFirebase();
     setError(null);
     try {
-      await signInWithPopup(auth, new GoogleAuthProvider());
+      await firebase.signInWithGoogle();
     } catch (err) {
       const code = (err as { code?: string } | null)?.code ?? '';
 
@@ -65,7 +84,7 @@ export function useOwner(): OwnerApi {
       // rejection as failure put a red "SIGN IN DID NOT COMPLETE" banner
       // over a perfectly good session. Ask auth what really happened
       // instead of trusting the promise.
-      if (auth.currentUser) return;
+      if (firebase.currentUser()) return;
 
       // Anything left is a real failure, and the code is the useful part:
       // auth/unauthorized-domain and auth/popup-blocked are by far the
@@ -75,8 +94,9 @@ export function useOwner(): OwnerApi {
   }, []);
 
   const leave = useCallback(async () => {
-    if (!auth) return;
-    await signOut(auth);
+    rememberAdmin(false);
+    const firebase = await loadFirebase();
+    await firebase.signOutUser();
   }, []);
 
   return {

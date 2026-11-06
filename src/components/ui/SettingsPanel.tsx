@@ -9,7 +9,7 @@ import {
   MAX_INLINE_IMAGE_CHARS,
   dataUrlBytes,
 } from '../../lib/fileData';
-import { firebaseConfigured } from '../../lib/firebaseClient';
+import { firebaseConfigured } from '../../lib/firebaseConfig';
 import { useCloseOnEscape } from '../../hooks/useCloseOnEscape';
 import { useDialogFocus } from '../../hooks/useDialogFocus';
 
