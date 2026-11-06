@@ -39,7 +39,9 @@ export function BookContent({ book, visible, onClose }: BookContentProps) {
       // tree during that window, invisible.
       inert={!visible}
       className={`fixed inset-0 z-30 flex items-center justify-center px-6 transition-opacity duration-500 ${
-        visible ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'
+        // The room softly out of focus behind the page while reading; the
+        // 3D scene already dimmed itself behind the book (BookPages).
+        visible ? 'pointer-events-auto opacity-100 backdrop-blur-[3px]' : 'pointer-events-none opacity-0'
       }`}
     >
       <div

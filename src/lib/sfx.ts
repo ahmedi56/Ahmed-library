@@ -80,6 +80,16 @@ export function playPageFlip() {
   burst(a.ctx, a.out, t + 0.14, 0.22, 0.14, { type: 'bandpass', from: 2600, to: 1200, q: 0.8 });
 }
 
+/** A few pages flicking past under a thumb. */
+export function playRiffle(pages = 4) {
+  const a = audioReady();
+  if (!a) return;
+  const t = a.ctx.currentTime;
+  for (let i = 0; i < pages; i++) {
+    burst(a.ctx, a.out, t + i * 0.07, 0.07, 0.1 - i * 0.015, { type: 'bandpass', from: 3200 - i * 300, to: 1800, q: 1.1 });
+  }
+}
+
 /** A book going back: a soft, low thump. */
 export function playBookClose() {
   const a = audioReady();

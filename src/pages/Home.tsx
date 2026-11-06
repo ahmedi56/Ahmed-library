@@ -41,7 +41,7 @@ import { useChallenges } from '../hooks/useChallenges';
 import { usePCSearch } from '../hooks/usePCSearch';
 import { unlockAudio } from '../lib/audio';
 import { timeOfDay } from '../lib/timeOfDay';
-import { playBookClose, playDoorCreak, playPageFlip, playSwitch } from '../lib/sfx';
+import { playDoorCreak, playSwitch } from '../lib/sfx';
 import { FallbackLibrary } from '../components/ui/FallbackLibrary';
 import { SceneErrorBoundary } from '../components/ui/SceneErrorBoundary';
 import { useBookInteraction } from '../hooks/useBookInteraction';
@@ -334,11 +334,6 @@ export function Home() {
       window.removeEventListener('keydown', unlock, { capture: true });
     };
   }, []);
-
-  useEffect(() => {
-    if (phase === 'opening') playPageFlip();
-    else if (phase === 'closing') playBookClose();
-  }, [phase]);
 
   // Skips the first run of each: a value's initial state isn't a change
   // anyone made, so it shouldn't make a sound.
