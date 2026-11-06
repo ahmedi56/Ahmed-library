@@ -6,11 +6,13 @@ import { isMuted, onMutedChange, setMuted, unlockAudio } from '../../lib/audio';
 interface PerformanceControlsProps {
   tier: PerformanceTier;
   onChange: (tier: PerformanceTier) => void;
+  /** The room just lowered the tier itself because it was running slowly. */
+  autoLowered?: boolean;
 }
 
 const TIERS: PerformanceTier[] = ['low', 'medium', 'high'];
 
-export function PerformanceControls({ tier, onChange }: PerformanceControlsProps) {
+export function PerformanceControls({ tier, onChange, autoLowered = false }: PerformanceControlsProps) {
   // The room makes sounds now, so it needs an off switch that's always in
   // reach — it lives with the other "how should this room behave" control.
   const muted = useSyncExternalStore(onMutedChange, isMuted, () => false);
@@ -31,6 +33,16 @@ export function PerformanceControls({ tier, onChange }: PerformanceControlsProps
         {muted ? <VolumeX size={13} aria-hidden="true" /> : <Volume2 size={13} aria-hidden="true" />}
       </button>
       <span aria-hidden="true" className="h-4 w-px bg-ink/15" />
+      {/* Says why the tier just changed under the visitor, and that the
+          buttons beside it put it back. */}
+      <p
+        role="status"
+        className={`pointer-events-none absolute bottom-full right-0 mb-2 whitespace-nowrap rounded-full border border-ink/10 bg-paper/90 px-3 py-1.5 tracking-[0.15em] text-ink/70 shadow-sm backdrop-blur-sm transition-opacity duration-500 ${
+          autoLowered ? 'opacity-100' : 'opacity-0'
+        }`}
+      >
+        {autoLowered ? `QUALITY LOWERED TO ${tier.toUpperCase()} FOR SMOOTHER MOTION` : ''}
+      </p>
       {TIERS.map((t) => (
         <button
           key={t}

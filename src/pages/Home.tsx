@@ -120,7 +120,7 @@ export function Home() {
   }`;
   const { books } = useBooks();
   const interaction = useBookInteraction();
-  const { tier, setTier, profile } = usePerformance();
+  const { tier, setTier, profile, autoLowered } = usePerformance();
   const reduced = useReducedMotion();
   const webglSupported = useWebGLSupport();
   const { phase: entrancePhase, enter, crossThreshold, skipToInside } = useEntrance(reduced);
@@ -514,7 +514,7 @@ export function Home() {
         </button>
       )}
 
-      <PerformanceControls tier={tier} onChange={setTier} />
+      <PerformanceControls tier={tier} onChange={setTier} autoLowered={autoLowered} />
       {/* Walk + interact controls for phones/tablets, where there is no
           WASD and no Pointer Lock. Renders nothing on pointer devices, or
           before the entrance sequence starts (see TouchControls). */}

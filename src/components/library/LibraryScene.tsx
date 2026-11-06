@@ -17,6 +17,7 @@ import { SceneAtmosphere } from './SceneAtmosphere';
 import { useBooks } from '../../hooks/useBooks';
 import type { useBookInteraction } from '../../hooks/useBookInteraction';
 import type { PerformanceProfile } from '../../hooks/usePerformance';
+import { FrameRateWatch } from './FrameRateWatch';
 import type { EntrancePhase } from '../../hooks/useEntrance';
 import { useAtmosphereMix } from '../../hooks/useAtmosphereMix';
 import { timePalette } from '../../lib/timeOfDay';
@@ -129,6 +130,8 @@ export function LibraryScene({
           quality={profile.tier}
         />
         <DustParticles count={profile.particles} />
+        {/* Keyed on the tier: a quality change restarts its warm-up. */}
+        <FrameRateWatch key={profile.tier} />
         <Hotspots discovered={discovered} active={entrancePhase === 'inside'} />
         <ProjectAnchors
           targeted={targetedAnchor}
