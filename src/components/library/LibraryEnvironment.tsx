@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { timePalette } from '../../lib/timeOfDay';
@@ -1313,19 +1313,39 @@ function Desk({ quality }: { quality: 'high' | 'medium' | 'low' }) {
         <cylinderGeometry args={[0.01, 0.01, 0.4, 8]} />
         <meshStandardMaterial color="#3a2e22" />
       </mesh>
-      <mesh position={[-0.5, 0.56, -0.2]} castShadow>
-        <coneGeometry args={[0.13, 0.18, 16, 1, true]} />
+      {/* A real lampshade, wider at the bottom and open at both ends (it
+          was a pointed cone), glowing from the bulb inside. No shadow: it
+          stood in the old directional light's path and drew a long stripe
+          across the side wall. */}
+      <mesh position={[-0.5, 0.53, -0.2]}>
+        <cylinderGeometry args={[0.07, 0.13, 0.16, 24, 1, true]} />
         <meshStandardMaterial
           color="#f2e3c4"
           emissive="#f2c87a"
-          emissiveIntensity={0.6}
+          emissiveIntensity={0.85}
+          roughness={0.85}
           side={THREE.DoubleSide}
         />
       </mesh>
-      {/* One lamp light. A second "bounce" point light used to sit under
-          it: barely visible, but every lit surface in the room paid for it
-          every frame. */}
-      <pointLight position={[-0.5, 0.5, -0.2]} intensity={1.1} color="#f2c87a" distance={2.5} />
+      <mesh position={[-0.5, 0.49, -0.2]}>
+        <sphereGeometry args={[0.03, 12, 10]} />
+        <meshBasicMaterial color="#fff4dc" toneMapped={false} />
+      </mesh>
+      {/* One lamp light, aimed down: the warm pool on the desk is what a
+          desk lamp is for. A point light lit the wall behind as much as the
+          desk. (A second "bounce" light used to sit under it too: barely
+          visible, but every lit surface paid for it every frame.) */}
+      <spotLight
+        position={[-0.5, 0.5, -0.2]}
+        intensity={2.4}
+        color="#f2c87a"
+        angle={1.0}
+        penumbra={0.8}
+        distance={2.6}
+        decay={1.5}
+      >
+        <DeskLampTarget />
+      </spotLight>
 
       <Laptop />
 
@@ -1709,4 +1729,15 @@ function CleaningSet() {
       </group>
     </group>
   );
+}
+
+/** Aims the desk lamp's spotlight down at the desk, a little forward. */
+function DeskLampTarget() {
+  const target = useRef<THREE.Object3D>(null);
+  useEffect(() => {
+    const t = target.current;
+    const light = t?.parent as THREE.SpotLight | undefined;
+    if (t && light) light.target = t;
+  }, []);
+  return <object3D ref={target} position={[0.25, -0.6, 0.15]} />;
 }
