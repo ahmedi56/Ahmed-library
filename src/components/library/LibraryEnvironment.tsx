@@ -170,6 +170,7 @@ export function LibraryEnvironment({ quality, lampOn }: EnvironmentProps) {
 
       {/* Desk */}
       <Desk quality={quality} />
+      <TrashCan />
 
       {/* Rug, under the desk + chair */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[1.6, -2.03, 2.0]} receiveShadow>
@@ -1740,4 +1741,46 @@ function DeskLampTarget() {
     if (t && light) light.target = t;
   }, []);
   return <object3D ref={target} position={[0.25, -0.6, 0.15]} />;
+}
+
+/**
+ * A wastepaper bin in the back-right corner, between the bookshelf and the
+ * window wall: a few crumpled drafts inside, and one that missed. Its floor
+ * footprint is in lib/collision.ts.
+ */
+function TrashCan() {
+  const height = 0.38;
+  const paper: [number, number, number, number][] = [
+    [0.03, height - 0.03, 0.02, 0.055],
+    [-0.05, height - 0.05, -0.03, 0.05],
+    [0.0, height - 0.01, -0.05, 0.045],
+  ];
+  return (
+    <group position={[4.12, -2.05, -2.6]}>
+      {/* Woven metal body: open at the top, narrower at the foot */}
+      <mesh position={[0, height / 2, 0]} castShadow receiveShadow>
+        <cylinderGeometry args={[0.17, 0.135, height, 28, 1, true]} />
+        <meshStandardMaterial color="#3a2e22" metalness={0.55} roughness={0.45} side={THREE.DoubleSide} />
+      </mesh>
+      <mesh position={[0, height - 0.006, 0]} rotation={[Math.PI / 2, 0, 0]}>
+        <torusGeometry args={[0.17, 0.008, 6, 28]} />
+        <meshStandardMaterial color="#c9a05c" metalness={0.75} roughness={0.3} />
+      </mesh>
+      <mesh position={[0, 0.006, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <circleGeometry args={[0.135, 28]} />
+        <meshStandardMaterial color="#2a2018" roughness={0.7} />
+      </mesh>
+      {paper.map(([x, y, z, r], i) => (
+        <mesh key={i} position={[x, y, z]} castShadow>
+          <icosahedronGeometry args={[r, 1]} />
+          <meshStandardMaterial color="#f1ead9" roughness={0.95} flatShading />
+        </mesh>
+      ))}
+      {/* The one that missed */}
+      <mesh position={[-0.3, 0.045, 0.12]} castShadow>
+        <icosahedronGeometry args={[0.045, 1]} />
+        <meshStandardMaterial color="#f1ead9" roughness={0.95} flatShading />
+      </mesh>
+    </group>
+  );
 }

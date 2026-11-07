@@ -30,6 +30,7 @@ export const FURNITURE_COLLIDERS: AABB[] = [
   { minX: 1.02, maxX: 2.78, minZ: 1.02, maxZ: 2.78 }, // desk (generous box for its rotated footprint)
   { minX: -4.42, maxX: -2.42, minZ: 0.35, maxZ: 1.95 }, // bed, re-centered on the left wall's open run
   { minX: -4.4, maxX: -3.9, minZ: 2.05, maxZ: 2.45 }, // nightstand
+  { minX: 3.9, maxX: 4.4, minZ: -2.85, maxZ: -2.35 }, // wastepaper bin, back-right corner
 ];
 
 // Clear width of the doorway, measured between the door frame posts' inner
