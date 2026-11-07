@@ -5,6 +5,7 @@ import { LibraryScene } from './library/LibraryScene';
 import { Navigation } from './ui/Navigation';
 import { ProjectPreview } from './ui/ProjectPreview';
 import { ProjectTheatre } from './ui/ProjectTheatre';
+import { ProjectWindow } from './ui/ProjectWindow';
 import { Tutorial } from './ui/Tutorial';
 import { CustomizationProvider, useCustomization } from '../hooks/useCustomization';
 import { PROJECT_ANCHORS, findAnchor } from '../data/projectAnchors';
@@ -159,6 +160,9 @@ function ProjectObjects({
   // advances on a timer — reading it live meant aiming at one project,
   // pressing E, and being shown whichever had cycled in by then.
   const [opened, setOpened] = useState<{ anchorId: string; projectId: string } | null>(null);
+  // The quick look (ProjectWindow): a project object opens this where the
+  // visitor stands; the TV itself still goes straight to the viewing mode.
+  const [peek, setPeek] = useState<string | null>(null);
 
   // ?project= link: open that project on the TV shortly after arrival, once
   // the camera has spawned (the viewing mode reads where it stands).
@@ -205,7 +209,8 @@ function ProjectObjects({
     (anchorId: string) => {
       const project = projectFor(anchorId);
       if (!project) return;
-      setOpened({ anchorId, projectId: project.id });
+      if (anchorId === 'tv') setOpened({ anchorId, projectId: project.id });
+      else setPeek(project.id);
       // Put it on the TV too, so the object, the panel and the screen are
       // all showing the same project while the visitor reads about it.
       showProject(project.id);
@@ -232,14 +237,22 @@ function ProjectObjects({
         onDownloadCv={onDownloadCv}
       />
 
-      {/* Hidden while the full panel is up, so the two never stack. */}
+      {/* Hidden while either panel is up, so they never stack. */}
       <ProjectPreview
-        anchor={opened ? null : findAnchor(hovered)}
-        project={opened ? null : projectFor(hovered)}
+        anchor={opened || peek ? null : findAnchor(hovered)}
+        project={opened || peek ? null : projectFor(hovered)}
         useVerb={useVerb}
         touch={touch}
       />
-      {/* Every project object leads to the TV: the viewing mode. */}
+      <ProjectWindow
+        slotId={peek}
+        onClose={() => setPeek(null)}
+        onOpenTv={(projectId) => {
+          setPeek(null);
+          setOpened({ anchorId: 'tv', projectId });
+        }}
+      />
+      {/* The TV's viewing mode: the full write-up, one click from any object. */}
       <ProjectTheatre
         slotId={opened?.projectId ?? null}
         onNavigate={(projectId) => setOpened((o) => (o ? { ...o, projectId } : o))}
