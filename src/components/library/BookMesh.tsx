@@ -12,7 +12,7 @@ export const BOOK_WIDTH = 0.045;
 export const BOOK_HEIGHT = 0.26;
 export const BOOK_DEPTH = 0.19;
 
-const SPINE_FONT = 'https://cdn.jsdelivr.net/fontsource/fonts/fraunces@latest/latin-600-normal.woff';
+export const SPINE_FONT = 'https://cdn.jsdelivr.net/fontsource/fonts/fraunces@latest/latin-600-normal.woff';
 
 interface BookMeshProps {
   data: BookData;

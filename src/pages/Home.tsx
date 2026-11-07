@@ -41,7 +41,16 @@ import { useChallenges } from '../hooks/useChallenges';
 import { usePCSearch } from '../hooks/usePCSearch';
 import { unlockAudio } from '../lib/audio';
 import { timeOfDay } from '../lib/timeOfDay';
-import { playDoorCreak, playSwitch } from '../lib/sfx';
+import { playDoorCreak, playLatch, playRumble, playSwitch } from '../lib/sfx';
+import { tourInput } from '../lib/tourInput';
+import {
+  BASEMENT_LOOK,
+  BASEMENT_STAND,
+  SHELF_LOOK,
+  SHELF_STAND,
+  type SecretPhase,
+} from '../lib/secretRoom';
+import { BasementPanel } from '../components/ui/BasementPanel';
 import { FallbackLibrary } from '../components/ui/FallbackLibrary';
 import { SceneErrorBoundary } from '../components/ui/SceneErrorBoundary';
 import { useBookInteraction } from '../hooks/useBookInteraction';
@@ -163,6 +172,13 @@ export function Home() {
   // signal this component already tracks; none of them gate anything.
   const challenges = useChallenges();
   const { earn } = challenges;
+  const secretUnlocked = discovered.size >= totalInteractables || Boolean(challenges.earned.explorer);
+  // Read from callbacks the 3D scene holds on to between renders.
+  const secretUnlockedRef = useRef(secretUnlocked);
+  const secretPhaseRef = useRef<SecretPhase>('closed');
+  useEffect(() => {
+    secretUnlockedRef.current = secretUnlocked;
+  }, [secretUnlocked]);
   const [cardOpen, setCardOpen] = useState(false);
   const { status: searchStatus } = usePCSearch();
 
@@ -223,6 +239,78 @@ export function Home() {
     },
     [discover]
   );
+  // The secret basement (lib/secretRoom.ts). Unlocked by finding everything
+  // in the room — this visit, or on an earlier one (the "Every corner"
+  // stamp is kept on the borrower's card).
+  const [secretHovered, setSecretHovered] = useState(false);
+  const [secretPhase, setSecretPhase] = useState<SecretPhase>('closed');
+  const [secretFade, setSecretFade] = useState(false);
+  useEffect(() => {
+    secretPhaseRef.current = secretPhase;
+  }, [secretPhase]);
+  const secretTimers = useRef<number[]>([]);
+  useEffect(() => () => secretTimers.current.forEach((t) => window.clearTimeout(t)), []);
+  const later = useCallback((ms: number, fn: () => void) => {
+    secretTimers.current.push(window.setTimeout(fn, ms));
+  }, []);
+  // Runs `fn` once CameraRig has actually made a requested cut. On a slow
+  // device a frame can take longer than any fixed delay: lifting the fade
+  // or handing the camera back before the cut landed showed the visitor
+  // the wrong room, or left them 40 m away to be pushed into a wall.
+  const afterCut = useCallback(
+    (fn: () => void) => {
+      const check = () => (tourInput.cut ? later(50, check) : later(80, fn));
+      check();
+    },
+    [later]
+  );
+
+  const pullSecret = useCallback(() => {
+    if (!secretUnlockedRef.current || secretPhaseRef.current !== 'closed') return;
+    // The tutorial or the TV's viewing mode has the camera.
+    if (tourInput.owner && tourInput.owner !== 'travel') return;
+    setSecretPhase('opening');
+    playLatch();
+    const slow = reduced ? 0 : 1;
+    later(450 * slow, playRumble);
+    // Swing, fade to black, then "downstairs": a cut to the basement, out
+    // of sight, before the fade lifts.
+    later(2400 * slow + 100, () => setSecretFade(true));
+    later(3100 * slow + 500, () => {
+      tourInput.owner = 'secret';
+      tourInput.standX = BASEMENT_STAND[0];
+      tourInput.standZ = BASEMENT_STAND[1];
+      tourInput.lookAt = BASEMENT_LOOK;
+      tourInput.cut = true;
+      tourInput.active = true;
+      setSecretPhase('inside');
+      earn('basement');
+      afterCut(() => later(300, () => setSecretFade(false)));
+    });
+  }, [afterCut, earn, later, reduced]);
+
+  const leaveSecret = useCallback(() => {
+    if (secretPhaseRef.current !== 'inside') return;
+    setSecretPhase('leaving');
+    setSecretFade(true);
+    later(700, () => {
+      tourInput.standX = SHELF_STAND[0];
+      tourInput.standZ = SHELF_STAND[1];
+      tourInput.lookAt = SHELF_LOOK;
+      tourInput.cut = true;
+      setSecretPhase('closed');
+      afterCut(() => {
+        if (tourInput.owner === 'secret') {
+          tourInput.active = false;
+          tourInput.owner = null;
+        }
+        setSecretFade(false);
+      });
+    });
+  }, [afterCut, later]);
+
+  const handleHoverSecret = useCallback((hovered: boolean) => setSecretHovered(hovered), []);
+
   // The project objects live inside RoomView (they need the customization
   // provider, which loads with the room chunk); this is the only thing
   // Home needs back from them.
@@ -408,6 +496,11 @@ export function Home() {
             lampOn={lampOn}
             onHoverLamp={handleHoverLamp}
             onToggleLamp={toggleLamp}
+            secretUnlocked={secretUnlocked}
+            secretPhase={secretPhase}
+            secretHovered={secretHovered}
+            onHoverSecret={handleHoverSecret}
+            onPullSecret={pullSecret}
             discovered={discovered}
             onDiscoverAnchor={discoverAnchor}
             useVerb={useVerb}
@@ -459,6 +552,29 @@ export function Home() {
       {/* Wall lamp switch beside the entrance — same aim-and-press pattern
           as the door/PC, gives the player a light source they control
           instead of waiting on the daylight/atmosphere ramp. */}
+      {secretHovered && secretPhase === 'closed' && (
+        <div className={hintClass}>
+          {secretUnlocked
+            ? `A BOOK WITH NO TITLE · ${useVerb} TO PULL IT`
+            : `A BOOK WITH NO TITLE · FIND EVERYTHING IN THE ROOM FIRST (${discovered.size}/${totalInteractables})`}
+        </div>
+      )}
+
+      <BasementPanel
+        visible={secretPhase === 'inside' && !secretFade}
+        reduced={reduced}
+        cvAvailable={resume.available}
+        onDownloadCv={downloadResume}
+        onLeave={leaveSecret}
+      />
+      {/* The way down (and back up): to black and out again. */}
+      <div
+        aria-hidden="true"
+        className={`pointer-events-none fixed inset-0 z-[35] bg-black transition-opacity duration-700 ${
+          secretFade ? 'opacity-100' : 'opacity-0'
+        }`}
+      />
+
       {lampHovered && (
         <div className={hintClass}>
           {lampOn ? `${useVerb} TO TURN OFF THE LAMP` : `${useVerb} TO TURN ON THE LAMP`}

@@ -11,7 +11,7 @@
 export const tourInput = {
   active: false,
   /** Who is driving: the tutorial, the viewing mode or "Go to". One at a time. */
-  owner: null as 'tutorial' | 'theatre' | 'travel' | null,
+  owner: null as 'tutorial' | 'theatre' | 'travel' | 'secret' | null,
   standX: 0,
   standZ: 0,
   /** World point to face. */

@@ -1,6 +1,8 @@
 import { useLayoutEffect, useMemo, useRef } from 'react';
+import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { Book } from './Book';
+import { BookMesh } from './BookMesh';
 import { useBooks } from '../../hooks/useBooks';
 import { getNicheGlowTexture, getWoodTexture } from '../../lib/textures';
 import {
@@ -17,7 +19,10 @@ import {
   UPPER_SHELF_Y,
   UPPER_SURFACE_Y,
   computeShelfDecor,
+  SECRET_BOOK_HEIGHT,
+  SECRET_BOOK_LOCAL_X,
 } from '../../lib/bookLayout';
+import type { BookData } from '../../data/books';
 import type { BookState } from '../../hooks/useBookInteraction';
 import type { FillerSlot } from '../../lib/bookLayout';
 
@@ -25,9 +30,52 @@ interface BookshelfProps {
   stateFor: (id: string) => BookState;
   reduced: boolean;
   quality?: 'high' | 'medium' | 'low';
+  /** Everything in the room found: the secret book glows (lib/secretRoom.ts). */
+  secretUnlocked?: boolean;
+  /** The crosshair or cursor is on the secret book. */
+  secretHovered?: boolean;
+  /** Pulled: the book tips like a lever and the bookcase swings open. */
+  secretOpen?: boolean;
 }
 
-export function Bookshelf({ stateFor, reduced, quality = 'high' }: BookshelfProps) {
+// How far the bookcase swings open on its hinge (the right-hand back
+// edge), in radians. Enough to show the warm light behind it without the
+// free end sweeping into someone standing at the shelf.
+const SWING_OPEN = 0.4;
+
+export function Bookshelf({
+  stateFor,
+  reduced,
+  quality = 'high',
+  secretUnlocked = false,
+  secretHovered = false,
+  secretOpen = false,
+}: BookshelfProps) {
+  const hinge = useRef<THREE.Group>(null);
+  const secretBook = useRef<THREE.Group>(null);
+  const glowMat = useMemo(
+    () => new THREE.MeshBasicMaterial({ color: '#ffc87a', transparent: true, opacity: 0, toneMapped: false }),
+    []
+  );
+  // The lever pull first, then the case: the book tips at once, the case
+  // follows a beat later, slowly, like something heavy on an old hinge.
+  const openedAt = useRef<number | null>(null);
+  useFrame(({ clock }, delta) => {
+    if (secretOpen && openedAt.current === null) openedAt.current = clock.elapsedTime;
+    if (!secretOpen) openedAt.current = null;
+    const since = openedAt.current === null ? 0 : clock.elapsedTime - openedAt.current;
+    const k = reduced ? 1 : Math.min(1, delta * 1.6);
+    if (hinge.current) {
+      const target = secretOpen && (reduced || since > 0.45) ? SWING_OPEN : 0;
+      // Closing happens behind the fade on the way back up: snap it.
+      hinge.current.rotation.y = secretOpen ? THREE.MathUtils.lerp(hinge.current.rotation.y, target, k) : 0;
+      glowMat.opacity = Math.min(1, hinge.current.rotation.y / SWING_OPEN);
+    }
+    if (secretBook.current) {
+      const tip = secretOpen ? 0.32 : secretHovered ? 0.06 : 0;
+      secretBook.current.rotation.x = THREE.MathUtils.lerp(secretBook.current.rotation.x, tip, reduced ? 1 : Math.min(1, delta * 8));
+    }
+  });
   const { books } = useBooks();
   const bookLayout = useMemo(() => computeBookLayout(books), [books]);
   const frameMat = useMemo(
@@ -98,6 +146,15 @@ export function Bookshelf({ stateFor, reduced, quality = 'high' }: BookshelfProp
 
   return (
     <group position={[SHELF_GROUP_OFFSET_X, 0, SHELF_GROUP_OFFSET_Z]} rotation={[0, SHELF_GROUP_ROTATION_Y, 0]}>
+      {/* Warm light from the passage behind, seen as the case swings open */}
+      {/* Wider than the case on the free (left) side, so some spills past
+          its swung-out edge instead of staying hidden behind it. */}
+      <mesh position={[-0.35, caseCenterY, -CASE_DEPTH / 2 - 0.012]} material={glowMat}>
+        <planeGeometry args={[CASE_WIDTH + 0.6, CASE_HEIGHT + 0.1]} />
+      </mesh>
+      {/* The hinge: the right-hand back edge of the case */}
+      <group ref={hinge} position={[CASE_WIDTH / 2, 0, -CASE_DEPTH / 2]}>
+      <group position={[-CASE_WIDTH / 2, 0, CASE_DEPTH / 2]}>
       {/* Shelf frame */}
       <mesh position={[0, SHELF_BOTTOM, 0]} receiveShadow castShadow material={frameMat}>
         <boxGeometry args={[CASE_WIDTH, SHELF_BOARD_THICKNESS, CASE_DEPTH]} />
@@ -150,9 +207,40 @@ export function Bookshelf({ stateFor, reduced, quality = 'high' }: BookshelfProp
           />
         );
       })}
+
+      {/* The secret book: no title, a little dusty until the room is found */}
+      <group position={[SECRET_BOOK_LOCAL_X, SHELF_SURFACE_Y, 0]}>
+        <group ref={secretBook}>
+          <group position={[0, (0.26 * SECRET_BOOK_HEIGHT) / 2, 0]}>
+            <BookMesh
+              data={secretUnlocked ? SECRET_BOOK_UNLOCKED : SECRET_BOOK_LOCKED}
+              quality={quality}
+              showLabel={false}
+              glow={secretUnlocked}
+            />
+          </group>
+        </group>
+      </group>
+      </group>
+      </group>
     </group>
   );
 }
+
+const SECRET_BOOK_BASE = {
+  id: 'secret',
+  category: 'about',
+  title: '',
+  subtitle: '',
+  spineLabel: '',
+  description: '',
+  status: 'ready',
+  thickness: 1.25,
+  height: SECRET_BOOK_HEIGHT,
+} as const;
+// Shelf books are all BookData; this one never appears in a list.
+const SECRET_BOOK_LOCKED = { ...SECRET_BOOK_BASE, coverColor: '#5e5850', accentColor: '#7a7266' } as BookData;
+const SECRET_BOOK_UNLOCKED = { ...SECRET_BOOK_BASE, coverColor: '#3a2416', accentColor: '#e0b45c' } as BookData;
 
 
 const FILLER_COLORS = ['#d9c9a8', '#a8b59a', '#c98f6b', '#8fa3b0', '#e4d8bf', '#b9a07a', '#9c7b6a'];

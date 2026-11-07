@@ -481,3 +481,39 @@ export function getNicheGlowTexture(split = 0.45) {
   cache.set(key, texture);
   return texture;
 }
+
+/** Old brick, for the basement walls: running bond, uneven tones, mortar. */
+export function getBrickTexture() {
+  const key = 'brick';
+  const cached = cache.get(key);
+  if (cached) return cached;
+
+  const size = 256;
+  const canvas = createCanvas(size);
+  const ctx = canvas.getContext('2d')!;
+  ctx.fillStyle = '#5a4636';
+  ctx.fillRect(0, 0, size, size);
+  const rows = 8;
+  const bh = size / rows;
+  const bw = size / 4;
+  const tones = ['#8a4f35', '#7a4430', '#94593b', '#6f3e2b', '#835038'];
+  for (let r = 0; r < rows; r++) {
+    const offset = r % 2 ? bw / 2 : 0;
+    for (let c = -1; c < 5; c++) {
+      const x = c * bw + offset;
+      ctx.fillStyle = tones[(r * 7 + c * 3 + 11) % tones.length];
+      ctx.fillRect(x + 2, r * bh + 2, bw - 4, bh - 4);
+      // Wear: a few darker specks per brick.
+      ctx.fillStyle = 'rgba(30,18,10,0.18)';
+      for (let k = 0; k < 6; k++) {
+        ctx.fillRect(x + 4 + Math.random() * (bw - 10), r * bh + 4 + Math.random() * (bh - 10), 3, 2);
+      }
+    }
+  }
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+  texture.colorSpace = THREE.SRGBColorSpace;
+  cache.set(key, texture);
+  return texture;
+}

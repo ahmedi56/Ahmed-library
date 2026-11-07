@@ -18,6 +18,8 @@ import { useBooks } from '../../hooks/useBooks';
 import type { useBookInteraction } from '../../hooks/useBookInteraction';
 import type { PerformanceProfile } from '../../hooks/usePerformance';
 import { FrameRateWatch } from './FrameRateWatch';
+import { BasementScene } from './BasementScene';
+import type { SecretPhase } from '../../lib/secretRoom';
 import type { EntrancePhase } from '../../hooks/useEntrance';
 import { useAtmosphereMix } from '../../hooks/useAtmosphereMix';
 import { timePalette } from '../../lib/timeOfDay';
@@ -48,6 +50,12 @@ interface LibrarySceneProps {
   onOpenAnchor: (id: string) => void;
   /** Start inside the room rather than on the porch (?book= deep links). */
   spawnInside: boolean;
+  /** The secret basement (lib/secretRoom.ts): unlocked, where it's at, and its book. */
+  secretUnlocked: boolean;
+  secretPhase: SecretPhase;
+  secretHovered: boolean;
+  onHoverSecret: (hovered: boolean) => void;
+  onPullSecret: () => void;
 }
 
 export function LibraryScene({
@@ -72,6 +80,11 @@ export function LibraryScene({
   onHoverAnchor,
   onOpenAnchor,
   spawnInside,
+  secretUnlocked,
+  secretPhase,
+  secretHovered,
+  onHoverSecret,
+  onPullSecret,
 }: LibrarySceneProps) {
   const { stateFor, hover, select, selectedId, phase } = interaction;
   const { books } = useBooks();
@@ -122,7 +135,17 @@ export function LibraryScene({
         <LibraryLighting shadows={profile.shadows} quality={profile.tier} mix={mix} />
         <LibraryEnvironment quality={profile.tier} lampOn={lampOn} />
         <Entrance phase={entrancePhase} open={doorOpen} reduced={reduced} quality={profile.tier} />
-        <Bookshelf stateFor={stateFor} reduced={reduced} quality={profile.tier} />
+        <Bookshelf
+          stateFor={stateFor}
+          reduced={reduced}
+          quality={profile.tier}
+          secretUnlocked={secretUnlocked}
+          secretHovered={secretHovered}
+          secretOpen={secretPhase !== 'closed'}
+        />
+        {/* Only while the visitor is down there: it mounts behind the fade,
+            so its light (which recompiles every material) is never seen. */}
+        {(secretPhase === 'inside' || secretPhase === 'leaving') && <BasementScene quality={profile.tier} />}
         <BookPages
           book={selectedBook}
           phase={phase === 'opening' || phase === 'opened' || phase === 'closing' ? phase : null}
@@ -165,6 +188,8 @@ export function LibraryScene({
         onHoverAnchor={onHoverAnchor}
         onOpenAnchor={onOpenAnchor}
         interactRef={interactRef}
+        onHoverSecret={onHoverSecret}
+        onPullSecret={onPullSecret}
       />
 
       {profile.postProcessing && (

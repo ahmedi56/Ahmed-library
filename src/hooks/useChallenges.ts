@@ -47,6 +47,13 @@ export const CHALLENGES: Challenge[] = [
     secret: true,
     teaser: 'The PC knows the answer to one question better than the internet does.',
   },
+  {
+    id: 'basement',
+    title: 'Down the stairs',
+    hint: 'Found the room under the library.',
+    secret: true,
+    teaser: 'Find everything in the room, then look for a book with no title.',
+  },
 ];
 
 const REQUIRED = CHALLENGES.filter((c) => !c.secret);

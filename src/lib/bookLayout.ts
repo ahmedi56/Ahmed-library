@@ -190,3 +190,14 @@ export function computeShelfDecor(layout: BookSlot[]): ShelfDecor {
 
   return { fillers, plantX, bookendX };
 }
+
+// The secret book (lib/secretRoom.ts): at the right-hand end of the section
+// books' row, where computeShelfDecor leaves a gap.
+export const SECRET_BOOK_HEIGHT = 1.04;
+export const SECRET_BOOK_LOCAL_X = CASE_WIDTH / 2 - 0.24;
+/** World position, for the crosshair. The shelf group isn't rotated. */
+export const SECRET_BOOK_WORLD: [number, number, number] = [
+  SHELF_GROUP_OFFSET_X + SECRET_BOOK_LOCAL_X,
+  SHELF_SURFACE_Y + (BOOK_HEIGHT * SECRET_BOOK_HEIGHT) / 2,
+  SHELF_GROUP_OFFSET_Z,
+];

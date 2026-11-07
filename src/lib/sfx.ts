@@ -90,6 +90,24 @@ export function playRiffle(pages = 4) {
   }
 }
 
+/** A hidden catch giving: a dry wooden click. */
+export function playLatch() {
+  const a = audioReady();
+  if (!a) return;
+  const t = a.ctx.currentTime;
+  burst(a.ctx, a.out, t, 0.04, 0.22, { type: 'bandpass', from: 1800, q: 2 });
+  tone(a.ctx, a.out, t + 0.01, 0.08, 0.12, 320, 'triangle', 180);
+}
+
+/** A heavy bookcase grinding round on an old hinge. */
+export function playRumble() {
+  const a = audioReady();
+  if (!a) return;
+  const t = a.ctx.currentTime;
+  burst(a.ctx, a.out, t, 1.6, 0.16, { type: 'lowpass', from: 260, to: 120, q: 0.7 });
+  tone(a.ctx, a.out, t, 1.4, 0.06, 62, 'sawtooth', 48);
+}
+
 /** A book going back: a soft, low thump. */
 export function playBookClose() {
   const a = audioReady();

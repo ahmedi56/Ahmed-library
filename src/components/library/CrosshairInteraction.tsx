@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
-import { computeBookLayout, getBookWorldPosition } from '../../lib/bookLayout';
+import { computeBookLayout, getBookWorldPosition, SECRET_BOOK_WORLD } from '../../lib/bookLayout';
 import { useBooks } from '../../hooks/useBooks';
 import { DOOR_Z } from './Entrance';
 import type { EntrancePhase } from '../../hooks/useEntrance';
@@ -27,7 +27,14 @@ interface CrosshairInteractionProps {
   /** Opens that object's project details. */
   onOpenAnchor: (id: string) => void;
   interactRef: React.RefObject<(() => void) | null>;
+  /** The untitled secret book on the shelf (lib/secretRoom.ts). */
+  onHoverSecret: (hovered: boolean) => void;
+  onPullSecret: () => void;
 }
+
+const SECRET_POINT = new THREE.Vector3(...SECRET_BOOK_WORLD);
+// Same id-space as the section books for the free cursor (lib/pointerAim).
+const SECRET_ID = '__secret';
 
 const BOOK_INTERACT_RADIUS = 0.22;
 const BOOK_MAX_DISTANCE = 2.4;
@@ -60,6 +67,7 @@ type Target =
   | { kind: 'pc' }
   | { kind: 'lamp' }
   | { kind: 'anchor'; id: string }
+  | { kind: 'secret' }
   | null;
 
 /**
@@ -84,6 +92,8 @@ export function CrosshairInteraction({
   onHoverAnchor,
   onOpenAnchor,
   interactRef,
+  onHoverSecret,
+  onPullSecret,
 }: CrosshairInteractionProps) {
   const { camera, gl } = useThree();
   const { books } = useBooks();
@@ -111,6 +121,7 @@ export function CrosshairInteraction({
       else if (target.kind === 'pc') onOpenPC();
       else if (target.kind === 'lamp') onToggleLamp();
       else if (target.kind === 'anchor') onOpenAnchor(target.id);
+      else if (target.kind === 'secret') onPullSecret();
       else if (entrancePhase === 'outside') onOpenDoor();
       else onToggleDoor();
     };
@@ -122,6 +133,7 @@ export function CrosshairInteraction({
     onOpenPC,
     onToggleLamp,
     onOpenAnchor,
+    onPullSecret,
     entrancePhase,
   ]);
 
@@ -185,7 +197,7 @@ export function CrosshairInteraction({
       raycaster.current.setFromCamera(ndc, camera);
       pointerDir.current.copy(raycaster.current.ray.direction);
       let pointerBest = Infinity;
-      for (const [id, point] of bookWorldPositions.current) {
+      for (const [id, point] of [...bookWorldPositions.current, [SECRET_ID, SECRET_POINT] as const]) {
         toPoint.current.copy(point).sub(origin);
         const t = toPoint.current.dot(pointerDir.current);
         if (t <= 0 || t > POINTER_BOOK_MAX_DISTANCE) continue;
@@ -203,9 +215,9 @@ export function CrosshairInteraction({
     }
 
     if (pointerBook) {
-      best = { kind: 'book', id: pointerBook };
+      best = pointerBook === SECRET_ID ? { kind: 'secret' } : { kind: 'book', id: pointerBook };
     } else if (entrancePhase === 'inside' || entrancePhase === 'walking') {
-      for (const [id, point] of bookWorldPositions.current) {
+      for (const [id, point] of [...bookWorldPositions.current, [SECRET_ID, SECRET_POINT] as const]) {
         toPoint.current.copy(point).sub(origin);
         const t = toPoint.current.dot(forward.current);
         if (t <= 0 || t > BOOK_MAX_DISTANCE) continue;
@@ -213,7 +225,7 @@ export function CrosshairInteraction({
         const dist = closest.current.distanceTo(point);
         if (dist < BOOK_INTERACT_RADIUS && dist < bestDist) {
           bestDist = dist;
-          best = { kind: 'book', id };
+          best = id === SECRET_ID ? { kind: 'secret' } : { kind: 'book', id };
         }
       }
 
@@ -292,6 +304,7 @@ export function CrosshairInteraction({
       onHoverDoor(best?.kind === 'door');
       onHoverLamp(best?.kind === 'lamp');
       onHoverAnchor(best?.kind === 'anchor' ? best.id : null);
+      onHoverSecret(best?.kind === 'secret');
     }
   });
 

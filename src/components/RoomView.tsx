@@ -11,6 +11,7 @@ import { PROJECT_ANCHORS, findAnchor } from '../data/projectAnchors';
 import { ProjectShowcaseProvider, useProjectShowcase } from '../hooks/useProjectShowcase';
 import type { useBookInteraction } from '../hooks/useBookInteraction';
 import type { PerformanceProfile } from '../hooks/usePerformance';
+import type { SecretPhase } from '../lib/secretRoom';
 import type { EntrancePhase } from '../hooks/useEntrance';
 
 interface RoomViewProps {
@@ -47,6 +48,12 @@ interface RoomViewProps {
   onAsk?: () => void;
   /** ?project= slug to open in the viewing mode on arrival. */
   initialProject: string | null;
+  /** The secret basement (lib/secretRoom.ts): unlocked, where it's at, and its book. */
+  secretUnlocked: boolean;
+  secretPhase: SecretPhase;
+  secretHovered: boolean;
+  onHoverSecret: (hovered: boolean) => void;
+  onPullSecret: () => void;
 }
 
 /**

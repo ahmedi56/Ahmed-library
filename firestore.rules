@@ -57,6 +57,19 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // How many visitors have found the secret basement (lib/secretRoom.ts).
+    // Anyone may read it, and anyone may add exactly one to it — nothing
+    // else: no other fields, no other values, no deleting. Someone could
+    // still inflate it by hand; it's a curiosity, not a metric.
+    match /stats/secret {
+      allow read: if true;
+      allow create: if request.resource.data.keys().hasOnly(['count'])
+                    && request.resource.data.count == 1;
+      allow update: if request.resource.data.keys().hasOnly(['count'])
+                    && request.resource.data.count == resource.data.count + 1;
+      allow delete: if false;
+    }
+
     // Anything not named above is closed.
     match /{document=**} {
       allow read, write: if false;
