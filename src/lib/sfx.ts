@@ -1,4 +1,4 @@
-import { audioReady } from './audio';
+import { audioReady, getAudio } from './audio';
 
 /**
  * The room's sound effects, synthesized rather than sampled (see audio.ts).
@@ -106,6 +106,47 @@ export function playRumble() {
   const t = a.ctx.currentTime;
   burst(a.ctx, a.out, t, 1.6, 0.16, { type: 'lowpass', from: 260, to: 120, q: 0.7 });
   tone(a.ctx, a.out, t, 1.4, 0.06, 62, 'sawtooth', 48);
+}
+
+/**
+ * The basement's room tone: a faint low hum, for as long as the visitor is
+ * down there. Wired through the master volume like everything else, so
+ * muting silences it mid-way. Returns the function that fades it out.
+ */
+export function startHum(): () => void {
+  const a = getAudio();
+  if (!a) return () => {};
+  const { ctx, out } = a;
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.0001, ctx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.025, ctx.currentTime + 1.5);
+  const f = ctx.createBiquadFilter();
+  f.type = 'lowpass';
+  f.frequency.value = 220;
+  const oscs = [55, 110.6].map((hz) => {
+    const o = ctx.createOscillator();
+    o.frequency.value = hz;
+    o.connect(f);
+    o.start();
+    return o;
+  });
+  f.connect(g).connect(out);
+  return () => {
+    const t = ctx.currentTime;
+    g.gain.cancelScheduledValues(t);
+    g.gain.setValueAtTime(Math.max(g.gain.value, 0.0001), t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.6);
+    oscs.forEach((o) => o.stop(t + 0.7));
+  };
+}
+
+/** A rubber stamp coming down on paper. */
+export function playStampPress() {
+  const a = audioReady();
+  if (!a) return;
+  const t = a.ctx.currentTime;
+  tone(a.ctx, a.out, t, 0.12, 0.25, 110, 'sine', 60);
+  burst(a.ctx, a.out, t, 0.06, 0.12, { type: 'lowpass', from: 1200 });
 }
 
 /** A book going back: a soft, low thump. */

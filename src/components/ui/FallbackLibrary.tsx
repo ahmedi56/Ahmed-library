@@ -167,7 +167,12 @@ export function FallbackLibrary({ onEnterRoom, initialBookId = null, notice = nu
         ))}
       </div>
 
-      <BookContent book={selected} visible={!!selected} onClose={() => setSelectedId(null)} />
+      <BookContent
+        book={selected}
+        visible={!!selected}
+        onClose={() => setSelectedId(null)}
+        onDownloadCv={resume.available ? () => void resume.download() : undefined}
+      />
       {askOpen && (
         <Suspense fallback={null}>
           <AskLibrarian open onClose={() => setAskOpen(false)} />

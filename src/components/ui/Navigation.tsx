@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Menu, X, Settings, Rows3, LogIn, LogOut, Gamepad2, MessageCircleQuestion } from 'lucide-react';
+import { Menu, X, Settings, Rows3, LogIn, LogOut, Gamepad2, MessageCircleQuestion, Download } from 'lucide-react';
 import { SettingsPanel } from './SettingsPanel';
 import { GoToMenu } from './GoToMenu';
 import { useBooks } from '../../hooks/useBooks';
@@ -31,9 +31,11 @@ interface NavigationProps {
   canTravel: boolean;
   /** Opens "Ask the librarian". Omitted while the librarian isn't set up. */
   onAsk?: () => void;
+  /** Downloads the CV. Omitted while there's no CV to offer. */
+  onDownloadCv?: () => void;
 }
 
-export function Navigation({ onOpenBook, onSkipRoom, onStartTutorial, canTravel, onAsk }: NavigationProps) {
+export function Navigation({ onOpenBook, onSkipRoom, onStartTutorial, canTravel, onAsk, onDownloadCv }: NavigationProps) {
   const { books } = useBooks();
   const { ready, isOwner, signedIn, signIn, leave, error } = useOwner();
   const [open, setOpen] = useState(false);
@@ -117,6 +119,21 @@ export function Navigation({ onOpenBook, onSkipRoom, onStartTutorial, canTravel,
             >
               <LogOut size={14} />
               <span className="hidden sm:inline">SIGN OUT</span>
+            </button>
+          )}
+
+          {/* The one button in the header that's filled, not outlined: the
+              CV is what most visitors who mean business came for, and as a
+              small pill in a corner even its owner couldn't find it. */}
+          {onDownloadCv && (
+            <button
+              onClick={onDownloadCv}
+              aria-label="Download CV"
+              className="flex items-center gap-2 rounded-full border border-brass bg-brass px-4 py-2 text-xs tracking-[0.2em] text-ink shadow-sm transition hover:bg-brass/85 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+            >
+              <Download size={14} aria-hidden="true" />
+              <span className="hidden sm:inline">DOWNLOAD CV</span>
+              <span className="sm:hidden">CV</span>
             </button>
           )}
 

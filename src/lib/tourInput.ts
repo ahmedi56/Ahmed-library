@@ -18,6 +18,8 @@ export const tourInput = {
   lookAt: [0, 0, 0] as [number, number, number],
   /** Jump to the stand point this frame instead of gliding (the fade cut). */
   cut: false,
+  /** Eye height above standing height, in metres: on a staircase. Glides like the rest. */
+  eyeOffset: 0,
   /** Written by CameraRig: position and view have caught up with the target. */
   settled: false,
   /**
@@ -33,4 +35,5 @@ export function resetTourInput() {
   tourInput.owner = null;
   tourInput.cut = false;
   tourInput.settled = false;
+  tourInput.eyeOffset = 0;
 }

@@ -1,5 +1,4 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
-import { Download } from 'lucide-react';
 /**
  * The 3D room, split into its own chunk.
  *
@@ -41,13 +40,19 @@ import { useChallenges } from '../hooks/useChallenges';
 import { usePCSearch } from '../hooks/usePCSearch';
 import { unlockAudio } from '../lib/audio';
 import { timeOfDay } from '../lib/timeOfDay';
-import { playDoorCreak, playLatch, playRumble, playSwitch } from '../lib/sfx';
+import { playDoorCreak, playLatch, playRumble, playStampPress, playSwitch } from '../lib/sfx';
 import { tourInput } from '../lib/tourInput';
 import {
   BASEMENT_LOOK,
   BASEMENT_STAND,
+  BASEMENT_Z,
+  HIRE_SUBJECT,
+  onHireStamp,
   SHELF_LOOK,
   SHELF_STAND,
+  STAIRS_FOOT,
+  STAIRS_START,
+  STAIRS_START_EYE,
   type SecretPhase,
 } from '../lib/secretRoom';
 import { BasementPanel } from '../components/ui/BasementPanel';
@@ -249,6 +254,8 @@ export function Home() {
   const [secretHovered, setSecretHovered] = useState(false);
   const [secretPhase, setSecretPhase] = useState<SecretPhase>('closed');
   const [secretFade, setSecretFade] = useState(false);
+  // Down the stairs and in front of the portrait: the note appears then.
+  const [secretArrived, setSecretArrived] = useState(false);
   useEffect(() => {
     secretPhaseRef.current = secretPhase;
   }, [secretPhase]);
@@ -269,6 +276,34 @@ export function Home() {
     [later]
   );
 
+  // Runs `fn` once the camera reports it has reached its new spot, or
+  // after `capMs` regardless, so a stalled frame can't strand the visitor.
+  const afterSettled = useCallback(
+    (fn: () => void, capMs = 8000) => {
+      tourInput.settled = false;
+      const started = performance.now();
+      const check = () =>
+        tourInput.settled || performance.now() - started > capMs ? fn() : later(80, check);
+      later(120, check);
+    },
+    [later]
+  );
+
+  // The walk down: from part-way down the stairs to their foot, looking
+  // ahead, then across the room to the portrait.
+  const walkDownStairs = useCallback(() => {
+    tourInput.standX = STAIRS_FOOT[0];
+    tourInput.standZ = STAIRS_FOOT[1];
+    tourInput.eyeOffset = 0;
+    tourInput.lookAt = [STAIRS_FOOT[0] + 0.6, -1.5, BASEMENT_Z + 3];
+    afterSettled(() => {
+      tourInput.standX = BASEMENT_STAND[0];
+      tourInput.standZ = BASEMENT_STAND[1];
+      tourInput.lookAt = BASEMENT_LOOK;
+      afterSettled(() => setSecretArrived(true));
+    });
+  }, [afterSettled]);
+
   const pullSecret = useCallback(() => {
     if (!secretUnlockedRef.current || secretPhaseRef.current !== 'closed') return;
     // The tutorial or the TV's viewing mode has the camera.
@@ -282,22 +317,38 @@ export function Home() {
     later(2400 * slow + 100, () => setSecretFade(true));
     later(3100 * slow + 500, () => {
       tourInput.owner = 'secret';
-      tourInput.standX = BASEMENT_STAND[0];
-      tourInput.standZ = BASEMENT_STAND[1];
-      tourInput.lookAt = BASEMENT_LOOK;
+      if (reduced) {
+        tourInput.standX = BASEMENT_STAND[0];
+        tourInput.standZ = BASEMENT_STAND[1];
+        tourInput.lookAt = BASEMENT_LOOK;
+      } else {
+        // Arrive on the stairs, looking down them.
+        tourInput.standX = STAIRS_START[0];
+        tourInput.standZ = STAIRS_START[1];
+        tourInput.eyeOffset = STAIRS_START_EYE;
+        tourInput.lookAt = [STAIRS_FOOT[0], -1.6, BASEMENT_Z + 3];
+      }
       tourInput.cut = true;
       tourInput.active = true;
       setSecretPhase('inside');
       earn('basement');
-      afterCut(() => later(300, () => setSecretFade(false)));
+      afterCut(() =>
+        later(300, () => {
+          setSecretFade(false);
+          if (reduced) setSecretArrived(true);
+          else later(700, walkDownStairs);
+        })
+      );
     });
-  }, [afterCut, earn, later, reduced]);
+  }, [afterCut, earn, later, reduced, walkDownStairs]);
 
   const leaveSecret = useCallback(() => {
     if (secretPhaseRef.current !== 'inside') return;
     setSecretPhase('leaving');
+    setSecretArrived(false);
     setSecretFade(true);
     later(700, () => {
+      tourInput.eyeOffset = 0;
       tourInput.standX = SHELF_STAND[0];
       tourInput.standZ = SHELF_STAND[1];
       tourInput.lookAt = SHELF_LOOK;
@@ -314,6 +365,20 @@ export function Home() {
   }, [afterCut, later]);
 
   const handleHoverSecret = useCallback((hovered: boolean) => setSecretHovered(hovered), []);
+
+  // The HIRE ME stamp, from the 3D stamp or the note's button: a stamp on
+  // the card, and an email already addressed and titled.
+  useEffect(
+    () =>
+      onHireStamp(() => {
+        playStampPress();
+        earn('recruiter');
+        later(650, () => {
+          window.location.href = `mailto:${identity.email}?subject=${encodeURIComponent(HIRE_SUBJECT)}`;
+        });
+      }),
+    [earn, later]
+  );
 
   // The project objects live inside RoomView (they need the customization
   // provider, which loads with the room chunk); this is the only thing
@@ -518,6 +583,7 @@ export function Home() {
             onTutorialEnd={endTutorial}
             cardOpen={cardOpen}
             onAsk={librarianReady ? () => setAskOpen(true) : undefined}
+            onDownloadCv={resume.available ? downloadResume : undefined}
           />
         </Suspense>
       </SceneErrorBoundary>
@@ -565,7 +631,7 @@ export function Home() {
       )}
 
       <BasementPanel
-        visible={secretPhase === 'inside' && !secretFade}
+        visible={secretPhase === 'inside' && secretArrived && !secretFade}
         reduced={reduced}
         cvAvailable={resume.available}
         onDownloadCv={downloadResume}
@@ -588,7 +654,12 @@ export function Home() {
       <EntranceHint visible={!loading && entrancePhase === 'outside'} onOpen={enter} />
       <LibraryIntro visible={!loading && isInside && !hasInteracted && !tutorialOn} touch={touch} reduced={reduced} />
       <BookLabel book={phase === 'hovered' ? hoveredBook : null} />
-      <BookContent book={selectedBook} visible={contentVisible} onClose={interaction.reset} />
+      <BookContent
+        book={selectedBook}
+        visible={contentVisible}
+        onClose={interaction.reset}
+        onDownloadCv={resume.available ? downloadResume : undefined}
+      />
       <PCSearch open={pcOpen} onClose={() => setPcOpen(false)} onHireQuestion={() => earn('good-taste')} />
       <DiscoveryTally
         found={discovered.size}
@@ -619,20 +690,6 @@ export function Home() {
           onDownloadResume={downloadResume}
         />
       </Suspense>
-
-      {/* Appears on its own once a CV exists — uploaded from the Settings
-          panel, or committed at identity.resumeUrl. */}
-      {resume.available && (
-        <button
-          type="button"
-          onClick={downloadResume}
-          disabled={resume.downloading}
-          className="pointer-events-auto fixed bottom-5 left-5 z-30 flex items-center gap-2 rounded-full border border-ink/10 bg-paper/70 px-4 py-2 text-[0.6rem] tracking-[0.2em] text-ink backdrop-blur-sm transition hover:border-brass hover:text-brass focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass disabled:opacity-60 sm:bottom-6 sm:left-6"
-        >
-          <Download size={13} />
-          {resume.downloading ? '…' : 'CV'}
-        </button>
-      )}
 
       <PerformanceControls tier={tier} onChange={setTier} autoLowered={autoLowered} />
       {/* Walk + interact controls for phones/tablets, where there is no

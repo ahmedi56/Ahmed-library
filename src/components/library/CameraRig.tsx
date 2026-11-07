@@ -116,6 +116,10 @@ export function CameraRig({ entrancePhase, doorOpen, reduced, onCrossThreshold, 
 
     const onClick = () => {
       unlockFootstepAudio();
+      // The basement is a set piece: the camera is on rails and its one
+      // clickable thing (the stamp) handles its own click. Capturing the
+      // pointer there would only hide the cursor the visitor needs.
+      if (tourInput.owner === 'secret') return;
       if (touchDragged.current) {
         touchDragged.current = false;
         return;
@@ -293,7 +297,7 @@ export function CameraRig({ entrancePhase, doorOpen, reduced, onCrossThreshold, 
       interactPressed.current = false;
       touchInput.interact = false;
 
-      const eyeY = FLOOR_Y + PLAYER_EYE_HEIGHT;
+      const eyeY = FLOOR_Y + PLAYER_EYE_HEIGHT + tourInput.eyeOffset;
       const before = camera.position.clone();
       const jumped = tourInput.cut || reduced;
       if (jumped) {
@@ -303,7 +307,7 @@ export function CameraRig({ entrancePhase, doorOpen, reduced, onCrossThreshold, 
         const k = 1 - Math.exp(-TOUR_GLIDE_RATE * delta);
         camera.position.x += (tourInput.standX - camera.position.x) * k;
         camera.position.z += (tourInput.standZ - camera.position.z) * k;
-        camera.position.y = eyeY;
+        camera.position.y += (eyeY - camera.position.y) * k;
       }
 
       const [lx, ly, lz] = tourInput.lookAt;

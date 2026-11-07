@@ -54,6 +54,13 @@ export const CHALLENGES: Challenge[] = [
     secret: true,
     teaser: 'Find everything in the room, then look for a book with no title.',
   },
+  {
+    id: 'recruiter',
+    title: 'Recruiter',
+    hint: 'Used the HIRE ME stamp in the basement.',
+    secret: true,
+    teaser: 'There is a rubber stamp somewhere below the library.',
+  },
 ];
 
 /** Rank by number of required stamps, lowest first. */

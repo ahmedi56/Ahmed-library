@@ -46,6 +46,7 @@ interface RoomViewProps {
   /** The borrower's card is open — the tutorial's last step waits on it. */
   cardOpen: boolean;
   onAsk?: () => void;
+  onDownloadCv?: () => void;
   /** ?project= slug to open in the viewing mode on arrival. */
   initialProject: string | null;
   /** The secret basement (lib/secretRoom.ts): unlocked, where it's at, and its book. */
@@ -80,6 +81,7 @@ export function RoomView({
   onTutorialEnd,
   cardOpen,
   onAsk,
+  onDownloadCv,
   initialProject,
   ...scene
 }: RoomViewProps) {
@@ -95,6 +97,7 @@ export function RoomView({
           onSkipRoom={onSkipRoom}
           onStartTutorial={onStartTutorial}
           onAsk={onAsk}
+          onDownloadCv={onDownloadCv}
           initialProject={initialProject}
         />
         <Tutorial
@@ -113,7 +116,7 @@ export function RoomView({
 
 type SceneProps = Omit<
   RoomViewProps,
-  'onOpenBook' | 'onSkipRoom' | 'onDiscoverAnchor' | 'useVerb' | 'touch' | 'tutorialActive' | 'onStartTutorial' | 'onTutorialEnd' | 'cardOpen' | 'onAsk' | 'initialProject'
+  'onOpenBook' | 'onSkipRoom' | 'onDiscoverAnchor' | 'useVerb' | 'touch' | 'tutorialActive' | 'onStartTutorial' | 'onTutorialEnd' | 'cardOpen' | 'onAsk' | 'onDownloadCv' | 'initialProject'
 >;
 
 /**
@@ -131,6 +134,7 @@ function ProjectObjects({
   onSkipRoom,
   onStartTutorial,
   onAsk,
+  onDownloadCv,
   initialProject,
 }: {
   onDiscoverAnchor: (id: string) => void;
@@ -141,6 +145,7 @@ function ProjectObjects({
   onSkipRoom: () => void;
   onStartTutorial: () => void;
   onAsk?: () => void;
+  onDownloadCv?: () => void;
   initialProject: string | null;
 }) {
   const { projects } = useCustomization();
@@ -224,6 +229,7 @@ function ProjectObjects({
         onStartTutorial={onStartTutorial}
         canTravel={scene.entrancePhase === 'inside'}
         onAsk={onAsk}
+        onDownloadCv={onDownloadCv}
       />
 
       {/* Hidden while the full panel is up, so the two never stack. */}

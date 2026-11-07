@@ -19,10 +19,41 @@ export type SecretPhase = 'closed' | 'opening' | 'inside' | 'leaving';
 // before. The "downstairs" is told by the fade and the footsteps.
 export const BASEMENT_Z = -40;
 export const BASEMENT_HALF = 3;
-/** Where the visitor stands, and what they face: the portrait. */
-export const BASEMENT_STAND: [number, number] = [0, BASEMENT_Z + 2.1];
+/** Where the visitor ends up, and what they face: the portrait, close enough to fill the view. */
+export const BASEMENT_STAND: [number, number] = [0, BASEMENT_Z + 0.1];
 export const PORTRAIT_POSITION: [number, number, number] = [0, -0.35, BASEMENT_Z - BASEMENT_HALF + 0.06];
-export const BASEMENT_LOOK: [number, number, number] = [0, -0.45, PORTRAIT_POSITION[2]];
+export const BASEMENT_LOOK: [number, number, number] = [0, -0.5, PORTRAIT_POSITION[2]];
+
+// The way down: the visitor arrives part-way down the stairs along the left
+// wall (BasementScene's Stairs: steps 0.3 m deep and 0.28 m high, rising
+// toward the back), walks down to the foot, then turns to the portrait.
+export const STAIRS_X = -BASEMENT_HALF + 0.5;
+export const STAIRS_START: [number, number] = [STAIRS_X, BASEMENT_Z + 1.0];
+/** Standing on the fourth step, 1.12 m up. */
+export const STAIRS_START_EYE = 1.12;
+export const STAIRS_FOOT: [number, number] = [STAIRS_X + 0.4, BASEMENT_Z + 2.4];
+
+// --- The HIRE ME stamp -------------------------------------------------------
+// Pressed from the 3D stamp (BasementScene) or the note's button
+// (BasementPanel); Home listens, so the stamp on the card and the email
+// happen the same way from either.
+
+export const hireStamp = { pressedAt: -1 };
+const stampListeners = new Set<() => void>();
+
+export function onHireStamp(fn: () => void): () => void {
+  stampListeners.add(fn);
+  return () => {
+    stampListeners.delete(fn);
+  };
+}
+
+export function pressHireStamp(): void {
+  hireStamp.pressedAt = performance.now();
+  stampListeners.forEach((fn) => fn());
+}
+
+export const HIRE_SUBJECT = 'I found your secret room 👋';
 
 /** Back in the library: in front of the shelf, as after "Go to › Bookshelf". */
 export const SHELF_STAND: [number, number] = [0, -1.0];

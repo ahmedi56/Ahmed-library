@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useDialogFocus } from '../../hooks/useDialogFocus';
-import { ArrowLeft, Mail, Phone, MapPin, ExternalLink, Copy, Check } from 'lucide-react';
+import { ArrowLeft, Mail, Phone, MapPin, ExternalLink, Copy, Check, Download } from 'lucide-react';
 import type { BookData } from '../../data/books';
 import { identity } from '../../data/books';
 import { useCloseOnEscape } from '../../hooks/useCloseOnEscape';
@@ -9,9 +9,11 @@ interface BookContentProps {
   book: BookData | null;
   visible: boolean;
   onClose: () => void;
+  /** Downloads the CV; the Contact book offers it when there is one. */
+  onDownloadCv?: () => void;
 }
 
-export function BookContent({ book, visible, onClose }: BookContentProps) {
+export function BookContent({ book, visible, onClose, onDownloadCv }: BookContentProps) {
   useCloseOnEscape(visible, onClose);
 
   // Same reasoning as Navigation.tsx: free the cursor so "BACK TO THE SHELF"
@@ -54,7 +56,7 @@ export function BookContent({ book, visible, onClose }: BookContentProps) {
           {book.title}
         </h2>
         {book.category === 'contact' ? (
-          <ContactDetails />
+          <ContactDetails onDownloadCv={onDownloadCv} />
         ) : (
           <p className="mt-4 text-sm leading-relaxed text-ink/70 sm:text-base">{book.description}</p>
         )}
@@ -94,7 +96,7 @@ export function BookContent({ book, visible, onClose }: BookContentProps) {
  * from `identity`; the ones left empty there simply don't render, so no
  * placeholder or guessed URL ever ships.
  */
-function ContactDetails() {
+function ContactDetails({ onDownloadCv }: { onDownloadCv?: () => void }) {
   const [copied, setCopied] = useState(false);
 
   const copyEmail = async () => {
@@ -128,6 +130,13 @@ function ContactDetails() {
           {copied ? <Check size={15} /> : <Copy size={15} />}
         </button>
       </div>
+
+      {onDownloadCv && (
+        <button type="button" onClick={onDownloadCv} className={`${rowClass} w-full border-brass/50`}>
+          <Download size={15} className="shrink-0" />
+          <span>Download my CV</span>
+        </button>
+      )}
 
       <a href={`tel:${identity.phone.replace(/\s+/g, '')}`} className={rowClass}>
         <Phone size={15} className="shrink-0" />
