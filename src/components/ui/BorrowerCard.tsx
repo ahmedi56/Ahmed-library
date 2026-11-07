@@ -252,7 +252,7 @@ export function BorrowerCard({ open, onClose, challenges, resumeAvailable, onDow
         )}
 
         <ul className="mt-5 divide-y divide-ink/10 border-y border-ink/10">
-          {CHALLENGES.map((c) => {
+          {challenges.list.map((c) => {
             const at = earned[c.id];
             const hidden = c.secret && !at;
             return (

@@ -17,7 +17,6 @@ import {
   SHELF_GROUP_ROTATION_Y,
   SHELF_SURFACE_Y,
   UPPER_SHELF_Y,
-  UPPER_SURFACE_Y,
   computeShelfDecor,
   SECRET_BOOK_HEIGHT,
   SECRET_BOOK_LOCAL_X,
@@ -189,7 +188,6 @@ export function Bookshelf({
       </mesh>
 
       <FillerBooks slots={decor.fillers} />
-      <ShelfPlant position={decor.plantX} />
       <Bookend x={decor.bookendX} material={brassMat} />
 
       {bookLayout.map(({ id, position, rotationY }) => {
@@ -293,33 +291,6 @@ function FillerBooks({ slots }: { slots: FillerSlot[] }) {
     </instancedMesh>
   );
 }
-
-/** A small potted plant on the upper shelf. */
-function ShelfPlant({ position }: { position: number }) {
-  const potH = 0.11;
-  return (
-    <group position={[position, UPPER_SURFACE_Y, 0.02]}>
-      <mesh position={[0, potH / 2, 0]} castShadow>
-        <cylinderGeometry args={[0.065, 0.05, potH, 18]} />
-        <meshStandardMaterial color="#b8714b" roughness={0.85} />
-      </mesh>
-      {PLANT_LEAVES.map(([x, y, z, r], i) => (
-        <mesh key={i} position={[x, potH + y, z]} castShadow>
-          <sphereGeometry args={[r, 10, 8]} />
-          <meshStandardMaterial color={i % 2 ? '#5f7d4a' : '#4d6b3c'} roughness={0.7} />
-        </mesh>
-      ))}
-    </group>
-  );
-}
-
-const PLANT_LEAVES: [number, number, number, number][] = [
-  [0, 0.05, 0, 0.06],
-  [-0.045, 0.08, 0.01, 0.045],
-  [0.05, 0.09, -0.01, 0.045],
-  [0.01, 0.13, 0.02, 0.04],
-  [-0.02, 0.04, 0.04, 0.04],
-];
 
 /** A brass L-bookend propping up the row's first stack. */
 function Bookend({ x, material }: { x: number; material: THREE.Material }) {

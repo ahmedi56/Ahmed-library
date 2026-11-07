@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 export interface Challenge {
   id: string;
@@ -56,17 +56,17 @@ export const CHALLENGES: Challenge[] = [
   },
 ];
 
-const REQUIRED = CHALLENGES.filter((c) => !c.secret);
-
 /** Rank by number of required stamps, lowest first. */
-const RANKS: Array<{ at: number; title: string }> = [
-  { at: 0, title: 'Visitor' },
-  { at: 2, title: 'Reader' },
-  { at: 4, title: 'Regular' },
-  { at: 6, title: 'Scholar' },
-  { at: REQUIRED.length - 1, title: 'Archivist' },
-  { at: REQUIRED.length, title: 'Head librarian' },
-];
+function ranksFor(required: number): Array<{ at: number; title: string }> {
+  return [
+    { at: 0, title: 'Visitor' },
+    { at: 2, title: 'Reader' },
+    { at: 4, title: 'Regular' },
+    { at: 6, title: 'Scholar' },
+    { at: required - 1, title: 'Archivist' },
+    { at: required, title: 'Head librarian' },
+  ];
+}
 
 /** A queued toast: a challenge id, or the one-off "card complete" notice. */
 export type StampEvent = string;
@@ -100,7 +100,22 @@ function saveEarned(earned: Earned) {
   }
 }
 
-export function useChallenges() {
+/**
+ * `unavailable`: stamps that can't be earned on this site right now — the
+ * CV stamp while no CV has been published. They drop off the card, so it
+ * can still be completed, instead of asking for something impossible.
+ */
+export function useChallenges(unavailable: readonly string[] = []) {
+  const unavailableKey = unavailable.join(',');
+  const list = useMemo(
+    () => CHALLENGES.filter((c) => !unavailableKey.split(',').includes(c.id)),
+    [unavailableKey]
+  );
+  const required = useMemo(() => list.filter((c) => !c.secret), [list]);
+  const requiredRef = useRef(required);
+  useEffect(() => {
+    requiredRef.current = required;
+  }, [required]);
   const [earned, setEarned] = useState<Earned>(loadEarned);
   // The source of truth for "already earned?" — read synchronously by
   // earn(), so a condition that fires on several renders in a row queues
@@ -113,10 +128,10 @@ export function useChallenges() {
   const earn = useCallback((id: string) => {
     if (earnedRef.current[id]) return;
     const next = { ...earnedRef.current, [id]: Date.now() };
-    const wasComplete = REQUIRED.every((c) => earnedRef.current[c.id]);
+    const wasComplete = requiredRef.current.every((c) => earnedRef.current[c.id]);
     earnedRef.current = next;
     setEarned(next);
-    const nowComplete = REQUIRED.every((c) => next[c.id]);
+    const nowComplete = requiredRef.current.every((c) => next[c.id]);
     setQueue((q) => (nowComplete && !wasComplete ? [...q, id, CARD_COMPLETE] : [...q, id]));
   }, []);
 
@@ -128,14 +143,17 @@ export function useChallenges() {
     setQueue([]);
   }, []);
 
-  const requiredDone = REQUIRED.filter((c) => earned[c.id]).length;
-  const rank = [...RANKS].reverse().find((r) => requiredDone >= r.at)?.title ?? RANKS[0].title;
+  const requiredDone = required.filter((c) => earned[c.id]).length;
+  const ranks = ranksFor(required.length);
+  const rank = [...ranks].reverse().find((r) => requiredDone >= r.at)?.title ?? ranks[0].title;
 
   return {
     earned,
     requiredDone,
-    requiredTotal: REQUIRED.length,
-    complete: requiredDone === REQUIRED.length,
+    requiredTotal: required.length,
+    complete: requiredDone === required.length,
+    /** The stamps on this card, in order. */
+    list,
     rank,
     current: queue[0] ?? null,
     earn,

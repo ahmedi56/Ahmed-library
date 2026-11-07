@@ -99,7 +99,6 @@ export interface FillerSlot {
 
 export interface ShelfDecor {
   fillers: FillerSlot[];
-  plantX: number;
   bookendX: number;
 }
 
@@ -130,8 +129,7 @@ function fillerBook(x: number, i: number, lean = 0, surfaceY = SHELF_SURFACE_Y, 
 
 /**
  * The shelf's decoration around the section books: a small cluster of plain
- * books in each gap, a bookend holding a stack at the left end, and a plant
- * at the right. Derived from the section books' layout so the two never
+ * books in each gap, and a bookend holding a stack at the left end. Derived from the section books' layout so the two never
  * overlap, whatever the number of books.
  */
 export function computeShelfDecor(layout: BookSlot[]): ShelfDecor {
@@ -166,12 +164,11 @@ export function computeShelfDecor(layout: BookSlot[]): ShelfDecor {
   const bookendX = -INNER_HALF_WIDTH + 0.03;
   cluster((bookendX + 0.01 + first - 0.07) / 2, 4, false);
 
-  // Upper row: longer runs of taller books, with breathing room between
-  // them and a space on the right for the plant.
-  const plantX = INNER_HALF_WIDTH - 0.32;
+  // Upper row: longer runs of taller books, with breathing room between them.
+  const rowEnd = INNER_HALF_WIDTH - 0.06;
   let x = -INNER_HALF_WIDTH + 0.06;
-  while (x < plantX - 0.2) {
-    const runEnd = Math.min(x + 0.3 + seeded(n + 700) * 0.35, plantX - 0.12);
+  while (x < rowEnd - 0.2) {
+    const runEnd = Math.min(x + 0.3 + seeded(n + 700) * 0.35, rowEnd);
     while (x < runEnd) {
       const b = fillerBook(0, n++, 0, UPPER_SURFACE_Y, true);
       fillers.push({ ...b, x: x + b.width / 2 });
@@ -188,7 +185,7 @@ export function computeShelfDecor(layout: BookSlot[]): ShelfDecor {
     x += 0.16 + seeded(n + 900) * 0.18;
   }
 
-  return { fillers, plantX, bookendX };
+  return { fillers, bookendX };
 }
 
 // The secret book (lib/secretRoom.ts): at the right-hand end of the section

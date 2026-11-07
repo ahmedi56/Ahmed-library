@@ -71,6 +71,10 @@ import { PROJECT_ANCHORS } from '../data/projectAnchors';
 const VIEW_STORAGE_KEY = 'library-view';
 
 /** Everything in the room a visitor can find: the books plus door, PC, lamp. */
+// Stamps the card leaves out while they can't be earned (useChallenges).
+const NO_UNAVAILABLE: string[] = [];
+const CV_UNAVAILABLE = ['borrow'];
+
 const EXTRA_INTERACTABLES = ['door', 'pc', 'lamp', ...PROJECT_ANCHORS.map((a) => a.id)];
 
 export function Home() {
@@ -170,7 +174,7 @@ export function Home() {
 
   // The borrower's card (useChallenges). Each stamp below is earned from a
   // signal this component already tracks; none of them gate anything.
-  const challenges = useChallenges();
+  const challenges = useChallenges(resume.available ? NO_UNAVAILABLE : CV_UNAVAILABLE);
   const { earn } = challenges;
   const secretUnlocked = discovered.size >= totalInteractables || Boolean(challenges.earned.explorer);
   // Read from callbacks the 3D scene holds on to between renders.
